@@ -1,43 +1,61 @@
 {
   "name": "p-setup",
-  "version": "0.1.0",
+  "version": "1.0.0",
   "description": "Intelligent project setup & management CLI. Auto-detects your stack, installs dependencies, configures environments, and keeps projects healthy.",
   "type": "module",
   "bin": {
-    "setup": "./dist/cli.js",
-    "p-setup": "./dist/cli.js"
+    "setup": "./dist/setup.js",
+    "p-setup": "./dist/setup.js"
   },
   "scripts": {
     "build": "tsup",
     "dev": "tsup --watch",
-    "start": "node dist/cli.js",
-    "lint": "eslint src --ext .ts,.tsx",
+    "test": "vitest run",
+    "test:watch": "vitest",
     "typecheck": "tsc --noEmit",
-    "test": "vitest run"
+    "lint": "eslint src/",
+    "start": "node dist/setup.js"
   },
-  "keywords": ["cli", "setup", "project", "development", "tui", "ai"],
+  "keywords": [
+    "project-setup",
+    "cli",
+    "devtools",
+    "ai",
+    "tui",
+    "environment",
+    "dependencies",
+    "automation"
+  ],
   "author": "Evan Lu",
   "license": "MIT",
   "engines": {
     "node": ">=18.0.0"
   },
   "dependencies": {
-    "ink": "^5.1.0",
-    "ink-text-input": "^6.0.0",
-    "ink-spinner": "^5.0.0",
-    "react": "^18.3.1",
+    "ansi-escapes": "^7.0.0",
+    "boxen": "^8.0.1",
     "chalk": "^5.4.1",
+    "cli-cursor": "^5.0.0",
+    "figures": "^6.1.0",
+    "glob": "^11.0.1",
+    "ink": "^5.1.0",
+    "ink-spinner": "^5.0.0",
+    "ink-text-input": "^6.0.0",
     "meow": "^13.2.0",
-    "zustand": "^5.0.3",
-    "openai": "^4.78.0"
+    "openai": "^4.78.0",
+    "ora": "^8.1.1",
+    "react": "^18.3.1",
+    "strip-ansi": "^7.1.0",
+    "yaml": "^2.7.1",
+    "zustand": "^5.0.0"
   },
   "devDependencies": {
-    "@types/react": "^18.3.12",
     "@types/node": "^22.10.0",
-    "typescript": "^5.7.2",
-    "tsup": "^8.3.5",
+    "@types/react": "^18.3.12",
+    "@vitest/coverage-v8": "^2.1.8",
     "eslint": "^9.15.0",
-    "vitest": "^2.1.8",
-    "ink-testing-library": "^4.0.0"
+    "tsup": "^8.3.5",
+    "typescript": "^5.7.2",
+    "vitest": "^2.1.8"
   }
 }

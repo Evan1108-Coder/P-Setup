@@ -1,20 +1,24 @@
 import { defineConfig } from "tsup";
 
 export default defineConfig({
-  entry: ["src/cli.tsx"],
+  entry: ["bin/setup.ts"],
   format: ["esm"],
   target: "node18",
   outDir: "dist",
-  clean: true,
   splitting: false,
   sourcemap: true,
+  clean: true,
   dts: false,
   banner: {
     js: "#!/usr/bin/env node",
   },
-  external: ["react", "ink", "yoga-wasm-web"],
-  noExternal: [],
+  external: ["react-devtools-core", "yoga-wasm-web"],
+  treeshake: true,
+  minify: false,
+  shims: true,
   esbuildOptions(options) {
-    options.jsx = "automatic";
+    options.define = {
+      "process.env.NODE_ENV": '"production"',
+    };
   },
 });
