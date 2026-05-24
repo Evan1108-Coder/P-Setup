@@ -103,6 +103,15 @@ export async function detectLanguage(cwd: string): Promise<string | null> {
       } catch {}
     }
 
+    // JavaScript takes priority if package.json has real dependencies
+    if (fileSet.has("package.json")) {
+      try {
+        const pkg = JSON.parse(await readFile(join(cwd, "package.json"), "utf-8"));
+        const depCount = Object.keys(pkg.dependencies || {}).length + Object.keys(pkg.devDependencies || {}).length;
+        if (depCount > 0) return "JavaScript";
+      } catch {}
+    }
+
     // Check other languages by file presence
     for (const [lang, signals] of Object.entries(LANGUAGE_SIGNALS)) {
       if (lang === "TypeScript" || lang === "JavaScript") continue;

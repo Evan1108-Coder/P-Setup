@@ -28,6 +28,12 @@ export async function detectPackageManager(cwd: string): Promise<string | null> 
     } catch {}
   }
 
+  // Check pnpm-workspace.yaml (monorepo without lockfile yet)
+  try {
+    await access(join(cwd, "pnpm-workspace.yaml"));
+    return "pnpm";
+  } catch {}
+
   // Fallback: if package.json exists, assume npm
   try {
     await access(join(cwd, "package.json"));

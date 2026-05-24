@@ -45,6 +45,7 @@ async function plainSetup(cwd: string): Promise<void> {
   store.getState().setScan(scan);
   store.getState().setSteps(steps);
 
+  let failures = 0;
   for (const step of steps) {
     const stepSpinner = ora(step.label).start();
     const result = await executeStep(step, cwd, store);
@@ -52,11 +53,16 @@ async function plainSetup(cwd: string): Promise<void> {
       stepSpinner.succeed(step.label);
     } else {
       stepSpinner.fail(`${step.label} — ${result.error || "failed"}`);
+      failures++;
     }
   }
 
   console.log("");
-  console.log(chalk.green.bold("✓ Setup complete!"));
+  if (failures === 0) {
+    console.log(chalk.green.bold("✓ Setup complete!"));
+  } else {
+    console.log(chalk.yellow.bold(`⚠ Setup finished with ${failures} failed step${failures > 1 ? "s" : ""}`));
+  }
 }
 
 async function plainDoctor(cwd: string): Promise<void> {

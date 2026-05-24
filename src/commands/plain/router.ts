@@ -269,8 +269,8 @@ async function cmdDeps(cwd: string) {
   const scan = await scanProject(cwd);
   const pm = scan.packageManager || "npm";
   console.log(chalk.blue(`Dependencies (${pm}):`));
-  const result = await runCommand(`${pm} list --depth=0 2>/dev/null || ${pm} list`, cwd);
-  console.log(result.stdout);
+  const result = await runCommand(`${pm} list --depth=0`, cwd);
+  console.log(result.stdout || result.stderr);
 }
 
 async function cmdConfig(sub: string | undefined, cwd: string) {
@@ -301,10 +301,12 @@ async function cmdDiff(cwd: string) {
   const scan = await scanProject(cwd);
   console.log(chalk.blue.bold("\n  Environment Diff\n"));
   console.log(chalk.dim(`  Locked at: ${new Date(cp.timestamp).toLocaleString()}`));
-  if (cp.scan.language !== scan.language) console.log(chalk.yellow(`  Language: ${cp.scan.language} → ${scan.language}`));
-  if (cp.scan.dependencies.prod !== scan.dependencies.prod) console.log(chalk.yellow(`  Prod deps: ${cp.scan.dependencies.prod} → ${scan.dependencies.prod}`));
-  if (cp.scan.dependencies.dev !== scan.dependencies.dev) console.log(chalk.yellow(`  Dev deps: ${cp.scan.dependencies.dev} → ${scan.dependencies.dev}`));
-  console.log(chalk.green("  No major changes detected") + "\n");
+  let changes = 0;
+  if (cp.scan.language !== scan.language) { console.log(chalk.yellow(`  Language: ${cp.scan.language} → ${scan.language}`)); changes++; }
+  if (cp.scan.dependencies.prod !== scan.dependencies.prod) { console.log(chalk.yellow(`  Prod deps: ${cp.scan.dependencies.prod} → ${scan.dependencies.prod}`)); changes++; }
+  if (cp.scan.dependencies.dev !== scan.dependencies.dev) { console.log(chalk.yellow(`  Dev deps: ${cp.scan.dependencies.dev} → ${scan.dependencies.dev}`)); changes++; }
+  if (changes === 0) console.log(chalk.green("  No major changes detected"));
+  console.log("");
 }
 
 async function cmdLogs(cwd: string) {

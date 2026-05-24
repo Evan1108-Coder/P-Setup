@@ -72,17 +72,45 @@ async function getScripts(
 async function getDependencyCounts(
   cwd: string
 ): Promise<{ prod: number; dev: number }> {
-  const { readFile } = await import("fs/promises");
+  const { readFile, access } = await import("fs/promises");
   const { join } = await import("path");
+
+  // Try package.json first
   try {
     const pkg = JSON.parse(await readFile(join(cwd, "package.json"), "utf-8"));
-    return {
-      prod: Object.keys(pkg.dependencies || {}).length,
-      dev: Object.keys(pkg.devDependencies || {}).length,
-    };
-  } catch {
-    return { prod: 0, dev: 0 };
-  }
+    const prod = Object.keys(pkg.dependencies || {}).length;
+    const dev = Object.keys(pkg.devDependencies || {}).length;
+    if (prod > 0 || dev > 0) return { prod, dev };
+  } catch {}
+
+  // Try requirements.txt (Python)
+  try {
+    const content = await readFile(join(cwd, "requirements.txt"), "utf-8");
+    const deps = content.split("\n").filter((l) => l.trim() && !l.startsWith("#") && !l.startsWith("-"));
+    return { prod: deps.length, dev: 0 };
+  } catch {}
+
+  // Try Cargo.toml (Rust)
+  try {
+    const content = await readFile(join(cwd, "Cargo.toml"), "utf-8");
+    let prod = 0, dev = 0;
+    let section = "";
+    for (const line of content.split("\n")) {
+      if (line.startsWith("[")) section = line;
+      else if (section === "[dependencies]" && line.includes("=") && line.trim()) prod++;
+      else if (section === "[dev-dependencies]" && line.includes("=") && line.trim()) dev++;
+    }
+    return { prod, dev };
+  } catch {}
+
+  // Try go.mod (Go)
+  try {
+    const content = await readFile(join(cwd, "go.mod"), "utf-8");
+    const reqs = content.split("\n").filter((l) => l.trim().startsWith("require") || (l.startsWith("\t") && l.includes("/")));
+    return { prod: Math.max(reqs.length - 1, 0), dev: 0 };
+  } catch {}
+
+  return { prod: 0, dev: 0 };
 }
 
 async function findConfigFiles(cwd: string): Promise<string[]> {
