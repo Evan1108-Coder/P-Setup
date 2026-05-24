@@ -18,19 +18,21 @@ export async function executeStep(
   const start = Date.now();
 
   store.getState().updateStep(step.id, { status: "running" });
+  store.getState().addLog({ content: step.label, type: "info", stepIndex: store.getState().currentStepIndex });
 
-  // Create snapshot before destructive operations
   if (step.type === "deps" || step.type === "env" || step.type === "config") {
     await createSnapshot(cwd, step.id);
   }
 
   if (!step.command) {
-    // Steps without commands are handled specially
     return handleSpecialStep(step, cwd, store);
   }
 
+  store.getState().addLog({ content: `$ ${step.command}`, type: "command" });
+
   try {
     const result = await runCommand(step.command, cwd, (line) => {
+      store.getState().addLog({ content: line, type: "progress" });
       store.getState().addMessage({
         role: "system",
         content: `[${step.label}] ${line}`,
@@ -38,21 +40,23 @@ export async function executeStep(
     });
 
     const duration = Date.now() - start;
+    const durationStr = duration < 1000 ? `${duration}ms` : `${(duration / 1000).toFixed(1)}s`;
 
     if (result.exitCode === 0) {
       store.getState().updateStep(step.id, { status: "done", output: result.stdout });
+      store.getState().addLog({ content: `✓ ${step.label} — OK (${durationStr})`, type: "success" });
       return { success: true, output: result.stdout, duration };
     } else {
-      store.getState().updateStep(step.id, {
-        status: "failed",
-        error: result.stderr || `Exit code: ${result.exitCode}`,
-      });
+      const errMsg = result.stderr?.split("\n")[0] || `Exit code: ${result.exitCode}`;
+      store.getState().updateStep(step.id, { status: "failed", error: errMsg });
+      store.getState().addLog({ content: `✗ ${step.label} — ${errMsg}`, type: "error" });
       return { success: false, output: result.stdout, error: result.stderr, duration };
     }
   } catch (err) {
     const duration = Date.now() - start;
     const error = err instanceof Error ? err.message : "Unknown error";
     store.getState().updateStep(step.id, { status: "failed", error });
+    store.getState().addLog({ content: `✗ ${step.label} — ${error}`, type: "error" });
     return { success: false, output: "", error, duration };
   }
 }
@@ -66,23 +70,22 @@ async function handleSpecialStep(
 
   switch (step.type) {
     case "env":
-      store.getState().addMessage({
-        role: "assistant",
-        content: "Checking environment variables...",
-      });
+      store.getState().addLog({ content: "Checking environment variables...", type: "info" });
+      store.getState().addMessage({ role: "assistant", content: "Checking environment variables..." });
       store.getState().updateStep(step.id, { status: "done" });
+      store.getState().addLog({ content: "✓ Environment check complete", type: "success" });
       return { success: true, output: "Environment check complete", duration: Date.now() - start };
 
     case "verify":
-      store.getState().addMessage({
-        role: "assistant",
-        content: "Verifying setup...",
-      });
+      store.getState().addLog({ content: "Verifying setup...", type: "info" });
+      store.getState().addMessage({ role: "assistant", content: "Verifying setup..." });
       store.getState().updateStep(step.id, { status: "done" });
+      store.getState().addLog({ content: "✓ Verification complete", type: "success" });
       return { success: true, output: "Verification complete", duration: Date.now() - start };
 
     default:
       store.getState().updateStep(step.id, { status: "skipped" });
+      store.getState().addLog({ content: `○ ${step.label} — skipped`, type: "info" });
       return { success: true, output: "Skipped", duration: Date.now() - start };
   }
 }
