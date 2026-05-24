@@ -1,5 +1,5 @@
 export const colors = {
-  // Primary
+  // Primary palette (dark blue terminal aesthetic)
   primary: "#5B9BD5",
   secondary: "#8EC6C5",
   accent: "#FFC857",
@@ -11,12 +11,12 @@ export const colors = {
   info: "#569CD6",
 
   // UI
-  bg: "#1E1E1E",
-  panel: "#252526",
-  border: "#3C3C3C",
+  bg: "#1B2838",
+  panel: "#1E2D40",
+  border: "#2A4A6B",
   borderActive: "#5B9BD5",
-  text: "#D4D4D4",
-  textDim: "#808080",
+  text: "#C8D6E5",
+  textDim: "#5C7A99",
   textBright: "#FFFFFF",
 
   // Syntax-like
@@ -24,24 +24,32 @@ export const colors = {
   string: "#CE9178",
   number: "#B5CEA8",
   function: "#DCDCAA",
+
+  // Special
+  heading: "#5B9BD5",
+  label: "#7FAACC",
+  value: "#C8D6E5",
+  dimValue: "#5C7A99",
+  green: "#4EC9B0",
+  yellow: "#DCDCAA",
+  red: "#F44747",
+  orange: "#E8A838",
+  cyan: "#56B6C2",
 };
 
 export const icons = {
   check: "✓",
   cross: "✗",
   arrow: "→",
+  arrowRight: "▸",
   dot: "●",
   circle: "○",
   spinner: ["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"],
-  warning: "⚠",
+  warning: "△",
   info: "ℹ",
-  folder: "📁",
-  file: "📄",
-  gear: "⚙",
-  rocket: "🚀",
-  brain: "🧠",
-  lightning: "⚡",
-  cache: "📦",
+  diamond: "◆",
+  triangleRight: "►",
+  block: "█",
 };
 
 export const borders = {
@@ -61,9 +69,9 @@ export const borders = {
 };
 
 export const shortcuts = [
-  { key: "↑↓←→", desc: "Navigate" },
-  { key: "Enter", desc: "Confirm" },
-  { key: "Tab", desc: "Next panel" },
-  { key: "q", desc: "Quit" },
-  { key: "/", desc: "Chat" },
+  { key: "Ctrl+C", desc: "abort" },
+  { key: "Ctrl+S", desc: "save checkpoint" },
+  { key: "Tab", desc: "skip field" },
+  { key: "↕↔", desc: "scroll log" },
+  { key: "?", desc: "help" },
 ];

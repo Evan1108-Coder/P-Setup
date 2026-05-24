@@ -19,7 +19,7 @@ export function Summary({ scan, steps, duration }: SummaryProps) {
     <Box flexDirection="column" paddingX={2} paddingY={1}>
       <Box marginBottom={1}>
         <Text color={colors.success} bold>
-          {icons.rocket} Setup Complete
+          ✓ Setup Complete
         </Text>
       </Box>
 
