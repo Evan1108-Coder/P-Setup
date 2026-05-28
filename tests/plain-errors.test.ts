@@ -9,7 +9,7 @@ describe("plain command structured errors", () => {
   let logs: string[];
 
   beforeEach(async () => {
-    tempDir = await mkdtemp(join(tmpdir(), "p-setup-plain-errors-"));
+    tempDir = await mkdtemp(join(tmpdir(), "setupr-plain-errors-"));
     logs = [];
     vi.spyOn(console, "log").mockImplementation((...args: unknown[]) => {
       logs.push(args.join(" "));

@@ -1,10 +1,10 @@
 import chalk from "chalk";
 import { ERROR_CATALOG } from "./catalog.js";
-import type { PSetupError, PSetupErrorCode, PSetupErrorInput } from "./types.js";
+import type { SetuprError, SetuprErrorCode, SetuprErrorInput } from "./types.js";
 
-export type { PSetupError, PSetupErrorCode, RecoveryAction } from "./types.js";
+export type { SetuprError, SetuprErrorCode, RecoveryAction } from "./types.js";
 
-export function createPSetupError(input: { code: PSetupErrorCode } & Partial<PSetupErrorInput>): PSetupError {
+export function createSetuprError(input: { code: SetuprErrorCode } & Partial<SetuprErrorInput>): SetuprError {
   const template = ERROR_CATALOG[input.code];
   return {
     ...template,
@@ -22,7 +22,7 @@ function dedupe(values: string[]): string[] {
   return [...new Set(values.filter(Boolean))];
 }
 
-export function renderPlainError(error: PSetupError): string {
+export function renderPlainError(error: SetuprError): string {
   const icon = error.severity === "fatal" || error.severity === "error"
     ? "✗"
     : error.severity === "warning"
@@ -46,7 +46,7 @@ export function renderPlainError(error: PSetupError): string {
   }
   if (error.canContinue !== undefined || error.forceBehavior) {
     lines.push("", chalk.bold("  What happens now"));
-    lines.push(`  • ${error.canContinue ? "P-Setup can continue or recover from this." : "P-Setup should stop before doing more work."}`);
+    lines.push(`  • ${error.canContinue ? "Setupr can continue or recover from this." : "Setupr should stop before doing more work."}`);
     if (error.forceBehavior) lines.push(`  • ${error.forceBehavior}`);
   }
   if (error.nextSteps?.length) {
@@ -62,18 +62,18 @@ export function renderPlainError(error: PSetupError): string {
   return lines.join("\n");
 }
 
-export function printPlainError(error: PSetupError): void {
+export function printPlainError(error: SetuprError): void {
   console.log(renderPlainError(error));
   if (error.exitCode && error.exitCode > 0) process.exitCode = error.exitCode;
 }
 
-export function errorSummary(error: PSetupError): string {
+export function errorSummary(error: SetuprError): string {
   return `${error.code}: ${error.title} — ${error.explanation}`;
 }
 
-export function fromUnknownError(error: unknown, context: Partial<PSetupErrorInput> = {}): PSetupError {
-  if (isPSetupError(error)) {
-    return createPSetupError({
+export function fromUnknownError(error: unknown, context: Partial<SetuprErrorInput> = {}): SetuprError {
+  if (isSetuprError(error)) {
+    return createSetuprError({
       ...error,
       ...context,
       code: error.code,
@@ -82,7 +82,7 @@ export function fromUnknownError(error: unknown, context: Partial<PSetupErrorInp
     });
   }
   const message = error instanceof Error ? error.message : String(error || "unknown error");
-  return createPSetupError({
+  return createSetuprError({
     ...context,
     code: "UNKNOWN_ERROR",
     details: [message],
@@ -90,8 +90,8 @@ export function fromUnknownError(error: unknown, context: Partial<PSetupErrorInp
   });
 }
 
-function isPSetupError(error: unknown): error is PSetupError {
-  const value = error as Partial<PSetupError> | undefined;
+function isSetuprError(error: unknown): error is SetuprError {
+  const value = error as Partial<SetuprError> | undefined;
   return Boolean(value?.code && value.title && value.explanation && value.timestamp);
 }
 
@@ -103,10 +103,10 @@ export function classifyCommandFailure(input: {
   stderr?: string;
   stepLabel?: string;
   stepType?: string;
-}): PSetupError {
+}): SetuprError {
   const combined = `${input.stderr || ""}\n${input.stdout || ""}`;
   const lower = combined.toLowerCase();
-  let code: PSetupErrorCode = "COMMAND_FAILED";
+  let code: SetuprErrorCode = "COMMAND_FAILED";
   if (/command not found|not recognized|enoent/.test(lower)) code = "COMMAND_NOT_FOUND";
   else if (/permission denied|eacces|operation not permitted/.test(lower)) code = "FILESYSTEM_PERMISSION_DENIED";
   else if (/network|econnreset|enotfound|etimedout|timeout|could not resolve|fetch failed/.test(lower)) code = "NETWORK_UNAVAILABLE";
@@ -115,7 +115,7 @@ export function classifyCommandFailure(input: {
   else if (input.stepType === "script" && /test/i.test(input.stepLabel || input.command)) code = "TEST_FAILED";
 
   const excerpt = usefulExcerpt(input.stderr || input.stdout || "");
-  return createPSetupError({
+  return createSetuprError({
     code,
     command: input.command,
     cwd: input.cwd,
@@ -135,10 +135,10 @@ export function classifyCommandFailure(input: {
   });
 }
 
-export function classifyAIProviderError(error: unknown, context: Partial<PSetupErrorInput> = {}): PSetupError {
+export function classifyAIProviderError(error: unknown, context: Partial<SetuprErrorInput> = {}): SetuprError {
   const raw = error instanceof Error ? error.message : String(error || "");
   const lower = raw.toLowerCase();
-  let code: PSetupErrorCode = "AI_PROVIDER_REQUEST_FAILED";
+  let code: SetuprErrorCode = "AI_PROVIDER_REQUEST_FAILED";
   if (/timed? out|timeout|abort/.test(lower)) code = "AI_PROVIDER_TIMEOUT";
   else if (/401|unauthorized|invalid api key|authentication/.test(lower)) code = "AI_PROVIDER_AUTH_FAILED";
   else if (/403|forbidden|access denied/.test(lower)) code = "AI_PROVIDER_AUTH_FAILED";
@@ -147,7 +147,7 @@ export function classifyAIProviderError(error: unknown, context: Partial<PSetupE
   else if (/500|502|503|504|unavailable|overloaded/.test(lower)) code = "AI_PROVIDER_UNAVAILABLE";
   else if (/json|parse|invalid response|protocol/.test(lower)) code = "AI_PROVIDER_PROTOCOL_ERROR";
 
-  return createPSetupError({
+  return createSetuprError({
     ...context,
     code,
     details: [sanitizeSecret(raw)],

@@ -18,7 +18,7 @@ export function buildDirectorContextPacket(input: DirectorContextInput): string 
   const state = input.store.getState();
   const ctx = state.context;
   const packet = {
-    kind: "p-setup-director-context",
+    kind: "setupr-director-context",
     note: "Sanitized current snapshot. Secret values are masked before being sent to the live AI model.",
     userRequest: sanitizeForAI(input.userText),
     project: {

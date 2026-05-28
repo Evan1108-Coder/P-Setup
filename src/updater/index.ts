@@ -1,7 +1,7 @@
 import chalk from "chalk";
 import { loadConfig, saveConfig } from "../state/config.js";
 
-const PACKAGE_NAME = "p-setup";
+const PACKAGE_NAME = "setupr";
 const CHECK_INTERVAL_MS = 24 * 60 * 60 * 1000; // 24 hours
 
 interface VersionInfo {

@@ -28,7 +28,7 @@ export function shouldUseAIPlanner(scan: ScanResult): boolean {
     return true;
   }
 
-  if (scan.configFiles.some((file) => file === ".p-setup.json")) {
+  if (scan.configFiles.some((file) => file === ".setupr.json")) {
     return false;
   }
 
@@ -49,7 +49,7 @@ async function planStepsWithAI(scan: ScanResult): Promise<SetupStep[]> {
   const messages: ChatMessage[] = [
     {
       role: "system",
-      content: `You are P-Setup's step planner. Given a project profile, produce a setup plan.
+      content: `You are Setupr's step planner. Given a project profile, produce a setup plan.
 Respond ONLY with a JSON array of steps. Each step: {"id":"unique_id","label":"Human label","type":"runtime|deps|env|script|verify|config","command":"shell command or null"}
 Be practical and specific to the detected stack.`,
     },

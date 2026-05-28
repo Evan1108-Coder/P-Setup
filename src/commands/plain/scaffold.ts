@@ -2,7 +2,7 @@ import chalk from "chalk";
 import { mkdir, writeFile } from "fs/promises";
 import { existsSync } from "fs";
 import { join } from "path";
-import { createPSetupError, printPlainError } from "../../errors/index.js";
+import { createSetuprError, printPlainError } from "../../errors/index.js";
 
 interface ScaffoldFlags {
   force?: boolean;
@@ -37,7 +37,7 @@ export async function cmdScaffold(sub: string | undefined, cwd: string, flags: S
       console.log("");
       break;
     default:
-      printPlainError(createPSetupError({
+      printPlainError(createSetuprError({
         code: "UNKNOWN_SUBCOMMAND",
         command: "scaffold",
         subcommand: sub,

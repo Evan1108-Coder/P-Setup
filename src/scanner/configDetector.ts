@@ -11,9 +11,9 @@ export interface ConfigResult {
 export async function detectFromConfig(
   cwd: string
 ): Promise<ConfigResult | null> {
-  // Priority 1: .p-setup.json
+  // Priority 1: .setupr.json
   try {
-    const raw = await readFile(join(cwd, ".p-setup.json"), "utf-8");
+    const raw = await readFile(join(cwd, ".setupr.json"), "utf-8");
     const config = JSON.parse(raw);
     if (config.language || config.framework || config.runtime || config.packageManager) {
       return {
@@ -25,12 +25,12 @@ export async function detectFromConfig(
     }
   } catch {}
 
-  // Priority 2: package.json "p-setup" field
+  // Priority 2: package.json "setupr" field
   try {
     const raw = await readFile(join(cwd, "package.json"), "utf-8");
     const pkg = JSON.parse(raw);
-    if (pkg["p-setup"]) {
-      const ps = pkg["p-setup"];
+    if (pkg["setupr"]) {
+      const ps = pkg["setupr"];
       return {
         language: ps.language,
         framework: ps.framework,

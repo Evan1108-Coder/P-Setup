@@ -116,7 +116,7 @@ export async function getRememberedChoice(key: string): Promise<string | null> {
 }
 
 function configDir(): string {
-  return join(process.env.HOME || homedir() || process.cwd(), ".p-setup");
+  return join(process.env.HOME || homedir() || process.cwd(), ".setupr");
 }
 
 function configPath(): string {

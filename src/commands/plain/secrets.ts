@@ -3,7 +3,7 @@ import { readFile, writeFile, mkdir } from "fs/promises";
 import { existsSync, readFileSync } from "fs";
 import { join } from "path";
 import { randomBytes, createCipheriv, createDecipheriv, scryptSync } from "crypto";
-import { createPSetupError, printPlainError } from "../../errors/index.js";
+import { createSetuprError, printPlainError } from "../../errors/index.js";
 
 interface SecretsFlags {
   force?: boolean;
@@ -12,7 +12,7 @@ interface SecretsFlags {
   [key: string]: unknown;
 }
 
-const SECRETS_DIR = ".p-setup";
+const SECRETS_DIR = ".setupr";
 const SECRETS_FILE = "secrets.enc";
 const KEY_FILE = "secrets.key";
 const ALGORITHM = "aes-256-gcm";
@@ -28,7 +28,7 @@ export async function cmdSecrets(sub: string | undefined, cwd: string, flags: Se
     case "import": return secretsImport(cwd, flags);
     case "rotate": return secretsRotate(cwd);
     default:
-      printPlainError(createPSetupError({
+      printPlainError(createSetuprError({
         code: "UNKNOWN_SUBCOMMAND",
         command: "secrets",
         subcommand: sub,
@@ -51,14 +51,14 @@ async function secretsInit(cwd: string, flags: SecretsFlags): Promise<void> {
   const key = randomBytes(32).toString("hex");
   await writeFile(keyPath, key, { mode: 0o600 });
   console.log(chalk.green("✓ Generated encryption key"));
-  console.log(chalk.yellow("  ⚠ Add .p-setup/secrets.key to .gitignore!"));
-  console.log(chalk.dim("  The .p-setup/secrets.enc file IS safe to commit."));
+  console.log(chalk.yellow("  ⚠ Add .setupr/secrets.key to .gitignore!"));
+  console.log(chalk.dim("  The .setupr/secrets.enc file IS safe to commit."));
 
   const gitignorePath = join(cwd, ".gitignore");
   if (existsSync(gitignorePath)) {
     const content = await readFile(gitignorePath, "utf-8");
     if (!content.includes("secrets.key")) {
-      await writeFile(gitignorePath, content.trimEnd() + "\n.p-setup/secrets.key\n");
+      await writeFile(gitignorePath, content.trimEnd() + "\n.setupr/secrets.key\n");
       console.log(chalk.green("  ✓ Added secrets.key to .gitignore"));
     }
   }
@@ -69,7 +69,7 @@ async function secretsSet(cwd: string, flags: SecretsFlags): Promise<void> {
   let value = flags.args?.[1];
 
   if (!name) {
-    printPlainError(createPSetupError({
+    printPlainError(createSetuprError({
       code: "SECRETS_ENCRYPTION_FAILED",
       command: "secrets",
       subcommand: "set",
@@ -100,7 +100,7 @@ async function secretsSet(cwd: string, flags: SecretsFlags): Promise<void> {
 async function secretsGet(cwd: string, flags: SecretsFlags): Promise<void> {
   const name = flags.args?.[0];
   if (!name) {
-    printPlainError(createPSetupError({
+    printPlainError(createSetuprError({
       code: "SECRETS_DECRYPTION_FAILED",
       command: "secrets",
       subcommand: "get",
@@ -219,10 +219,10 @@ async function secretsRotate(cwd: string): Promise<void> {
 function getEncryptionKey(cwd: string): Buffer {
   const keyPath = join(cwd, SECRETS_DIR, KEY_FILE);
   if (!existsSync(keyPath)) {
-    throw createPSetupError({ code: "SECRETS_KEY_MISSING", command: "secrets", cwd });
+    throw createSetuprError({ code: "SECRETS_KEY_MISSING", command: "secrets", cwd });
   }
   const hex = readFileSync(keyPath, "utf-8").trim();
-  return scryptSync(hex, "p-setup-salt", 32);
+  return scryptSync(hex, "setupr-salt", 32);
 }
 
 async function loadSecrets(cwd: string): Promise<Record<string, string>> {

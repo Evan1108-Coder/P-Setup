@@ -1,5 +1,5 @@
 import { loadConfig, saveConfig } from "../state/config.js";
-import { createPSetupError } from "../errors/index.js";
+import { createSetuprError } from "../errors/index.js";
 
 interface TelemetryEvent {
   event: string;

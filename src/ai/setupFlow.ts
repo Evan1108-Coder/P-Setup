@@ -2,7 +2,7 @@ import { readFile, writeFile } from "fs/promises";
 import { join } from "path";
 import type { ScanResult } from "../scanner/index.js";
 import type { SetupStep } from "./planner.js";
-import { createPSetupError, sanitizeSecret } from "../errors/index.js";
+import { createSetuprError, sanitizeSecret } from "../errors/index.js";
 
 export type SetupTimelineEvent =
   | {
@@ -509,7 +509,7 @@ export async function mergeEnvValues(cwd: string, values: Record<string, string>
   try {
     await writeFile(envPath, lines.join("\n").replace(/\n*$/, "\n"));
   } catch (err) {
-    throw createPSetupError({
+    throw createSetuprError({
       code: "ENV_WRITE_FAILED",
       cwd,
       details: [err instanceof Error ? err.message : String(err)],
@@ -571,7 +571,7 @@ function commandWarnings(scan: ScanResult, command: string, force: boolean): str
     doctor: ["Will check runtimes, package manager, env files, services, and common project health signals."],
     update: ["Will inspect dependencies for updates. It will ask before applying risky changes."],
     clean: ["Will remove generated artifacts for the selected clean mode. Source code is not affected."],
-    auth: ["Will show global P-Setup auth status. API keys stay masked and raw secrets are not printed."],
+    auth: ["Will show global Setupr auth status. API keys stay masked and raw secrets are not printed."],
   };
   const lines = warnings[command] || ["Will execute the requested operation."];
   return force ? [...lines, "Force mode: skip safe prompts, still stop for destructive or blocked actions."] : lines;

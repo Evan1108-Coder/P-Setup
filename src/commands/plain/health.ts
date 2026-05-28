@@ -4,7 +4,7 @@ import { readFile, stat } from "fs/promises";
 import { join } from "path";
 import { runCommand } from "../../executor/index.js";
 import { scanProject } from "../../scanner/index.js";
-import { createPSetupError, printPlainError } from "../../errors/index.js";
+import { createSetuprError, printPlainError } from "../../errors/index.js";
 
 interface HealthFlags {
   force?: boolean;
@@ -28,7 +28,7 @@ export async function cmdHealth(sub: string | undefined, cwd: string, flags: Hea
     case "outdated": return healthOutdated(cwd);
     case "size": return healthSize(cwd);
     default:
-      printPlainError(createPSetupError({
+      printPlainError(createSetuprError({
         code: "UNKNOWN_SUBCOMMAND",
         command: "health",
         subcommand: sub,
@@ -71,7 +71,7 @@ async function healthFull(cwd: string): Promise<void> {
   console.log(chalk.dim(`  Score: ${passed}/${checks.length} passed, ${warned} warnings, ${failed} failures`));
 
   if (failed > 0) {
-    printPlainError(createPSetupError({
+    printPlainError(createSetuprError({
       code: "HEALTH_CHECK_FAILED",
       command: "health",
       cwd,

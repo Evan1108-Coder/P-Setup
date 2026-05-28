@@ -5,7 +5,7 @@ import { detectPackageManager } from "./packageManager.js";
 import { detectRuntime } from "./runtimeDetector.js";
 import { detectServices } from "./serviceDetector.js";
 import { detectMonorepo } from "./monorepoDetector.js";
-import { createPSetupError } from "../errors/index.js";
+import { createSetuprError } from "../errors/index.js";
 
 export interface ScanResult {
   language: string | null;
@@ -80,7 +80,7 @@ export async function scanProject(cwd: string): Promise<ScanResult> {
 async function validateProjectFiles(cwd: string): Promise<void> {
   const { readFile } = await import("fs/promises");
   const { join } = await import("path");
-  for (const file of ["package.json", ".p-setup.json", "lerna.json"]) {
+  for (const file of ["package.json", ".setupr.json", "lerna.json"]) {
     try {
       const raw = await readFile(join(cwd, file), "utf-8");
       JSON.parse(raw);
@@ -88,8 +88,8 @@ async function validateProjectFiles(cwd: string): Promise<void> {
       const code = (err as { code?: string } | undefined)?.code;
       if (code === "ENOENT") continue;
       const message = err instanceof Error ? err.message : String(err);
-      throw createPSetupError({
-        code: file === ".p-setup.json" ? "PROJECT_CONFIG_INVALID" : "MALFORMED_PROJECT_FILE",
+      throw createSetuprError({
+        code: file === ".setupr.json" ? "PROJECT_CONFIG_INVALID" : "MALFORMED_PROJECT_FILE",
         cwd,
         details: [`File: ${file}`, message],
         canContinue: false,
@@ -206,7 +206,7 @@ async function findConfigFiles(cwd: string): Promise<string[]> {
     "mix.exs",
     "pubspec.yaml",
     "composer.json",
-    ".p-setup.json",
+    ".setupr.json",
   ];
   try {
     const files = await readdir(cwd);

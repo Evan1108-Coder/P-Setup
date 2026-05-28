@@ -2,7 +2,7 @@ import chalk from "chalk";
 import { existsSync } from "fs";
 import { readdir, writeFile, mkdir } from "fs/promises";
 import { join } from "path";
-import { createPSetupError, printPlainError } from "../../errors/index.js";
+import { createSetuprError, printPlainError } from "../../errors/index.js";
 import { scanProject } from "../../scanner/index.js";
 
 interface InitFlags {
@@ -29,11 +29,11 @@ async function initFromDetection(cwd: string, flags: InitFlags): Promise<void> {
   );
 
   if (hasProject && !flags.force) {
-    printPlainError(createPSetupError({ code: "INIT_ALREADY_EXISTS", command: "init", cwd }));
+    printPlainError(createSetuprError({ code: "INIT_ALREADY_EXISTS", command: "init", cwd }));
     return;
   }
 
-  console.log(chalk.blue.bold("\n  P-Setup Init\n"));
+  console.log(chalk.blue.bold("\n  Setupr Init\n"));
 
   let language = "javascript";
   let pm = "npm";
@@ -177,7 +177,7 @@ async function initFromTemplate(cwd: string, template: string, flags: InitFlags)
 
   if (template.includes("/")) {
     console.log(chalk.blue(`Fetching template from: ${template}`));
-    printPlainError(createPSetupError({
+    printPlainError(createSetuprError({
       code: "TEMPLATE_FETCH_FAILED",
       command: "init",
       cwd,
@@ -186,7 +186,7 @@ async function initFromTemplate(cwd: string, template: string, flags: InitFlags)
     return;
   }
 
-  printPlainError(createPSetupError({
+  printPlainError(createSetuprError({
     code: "TEMPLATE_NOT_FOUND",
     command: "init",
     cwd,

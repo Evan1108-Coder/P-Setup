@@ -2,7 +2,7 @@ import chalk from "chalk";
 import { writeFile, readFile } from "fs/promises";
 import { existsSync } from "fs";
 import { join } from "path";
-import { createPSetupError, printPlainError } from "../../errors/index.js";
+import { createSetuprError, printPlainError } from "../../errors/index.js";
 import { scanProject } from "../../scanner/index.js";
 import { runCommand } from "../../executor/index.js";
 
@@ -20,7 +20,7 @@ export async function cmdLint(sub: string | undefined, cwd: string, flags: LintF
     case "setup": return lintSetup(cwd, flags);
     case "fix": return lintFix(cwd, flags);
     default:
-      printPlainError(createPSetupError({
+      printPlainError(createSetuprError({
         code: "UNKNOWN_SUBCOMMAND",
         command: "lint",
         subcommand: sub,
@@ -42,7 +42,7 @@ async function lintRun(cwd: string, flags: LintFlags): Promise<void> {
     } else {
       console.log(result.stdout);
       console.log(result.stderr);
-      printPlainError(createPSetupError({ code: "COMMAND_FAILED", command: "lint", cwd, details: ["Lint check failed."] }));
+      printPlainError(createSetuprError({ code: "COMMAND_FAILED", command: "lint", cwd, details: ["Lint check failed."] }));
     }
   } else {
     // Try to detect and run appropriate linter directly

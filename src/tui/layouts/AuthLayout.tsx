@@ -44,7 +44,7 @@ export function AuthLayout() {
     return (
       <Box key={`${terminal.width}x${terminal.height}`} flexDirection="column" width={terminal.width} height={terminal.height}>
         <Box height={1} justifyContent="space-between">
-          <Text color={colors.primary} bold> P-Setup Auth</Text>
+          <Text color={colors.primary} bold> Setupr Auth</Text>
           <Text color={colors.textDim} wrap="truncate">masked keys only</Text>
         </Box>
 
@@ -73,7 +73,7 @@ export function AuthLayout() {
   return (
     <Box key={`${terminal.width}x${terminal.height}`} flexDirection="column" width={terminal.width} height={terminal.height}>
       <Box height={1} justifyContent="space-between">
-        <Text color={colors.primary} bold> P-Setup Auth</Text>
+        <Text color={colors.primary} bold> Setupr Auth</Text>
         <Text color={colors.textDim}>global auth · masked keys only</Text>
       </Box>
 
@@ -113,7 +113,7 @@ export function AuthLayout() {
             {layout.actions.height >= 8 && <Text color={colors.text} wrap="truncate">setup auth migrate</Text>}
             {layout.actions.height >= 10 && <Text> </Text>}
             {layout.actions.height >= 7 && <Text color={colors.heading} bold>STORAGE</Text>}
-            {layout.actions.height >= 7 && <Text color={colors.textDim} wrap="truncate">~/.p-setup/secrets.json</Text>}
+            {layout.actions.height >= 7 && <Text color={colors.textDim} wrap="truncate">~/.setupr/secrets.json</Text>}
             {layout.actions.height >= 9 && <Text color={colors.textDim} wrap="truncate">mode 0600 · project .env stays app-only</Text>}
           </Box>
         </Panel>

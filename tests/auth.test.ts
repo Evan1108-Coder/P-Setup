@@ -20,7 +20,7 @@ describe("auth secrets", () => {
   let tempDir: string;
 
   beforeEach(async () => {
-    tempDir = await mkdtemp(join(tmpdir(), "p-setup-auth-test-"));
+    tempDir = await mkdtemp(join(tmpdir(), "setupr-auth-test-"));
     chdir(tempDir);
     env.HOME = join(tempDir, "home");
     await mkdir(env.HOME, { recursive: true });
@@ -85,7 +85,7 @@ describe("auth secrets", () => {
   });
 
   it("stops on invalid secrets files instead of pretending keys are missing", async () => {
-    await mkdir(join(env.HOME!, ".p-setup"), { recursive: true });
+    await mkdir(join(env.HOME!, ".setupr"), { recursive: true });
     await writeFile(secretsPath(), "{broken");
     await chmod(secretsPath(), 0o600);
 

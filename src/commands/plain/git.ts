@@ -1,6 +1,6 @@
 import chalk from "chalk";
 import { runCommand } from "../../executor/index.js";
-import { createPSetupError, printPlainError } from "../../errors/index.js";
+import { createSetuprError, printPlainError } from "../../errors/index.js";
 import { scanProject } from "../../scanner/index.js";
 import { loadConfig } from "../../state/config.js";
 
@@ -14,7 +14,7 @@ interface GitFlags {
 
 export async function cmdGit(sub: string | undefined, cwd: string, flags: GitFlags): Promise<void> {
   if (!await isGitAvailable(cwd)) {
-    printPlainError(createPSetupError({ code: "GIT_NOT_INSTALLED", command: "git", cwd }));
+    printPlainError(createSetuprError({ code: "GIT_NOT_INSTALLED", command: "git", cwd }));
     return;
   }
 
@@ -42,7 +42,7 @@ export async function cmdGit(sub: string | undefined, cwd: string, flags: GitFla
     case "contributors": return gitContributors(cwd);
     case "undo": return gitUndo(cwd, flags);
     default:
-      printPlainError(createPSetupError({
+      printPlainError(createSetuprError({
         code: "UNKNOWN_SUBCOMMAND",
         command: "git",
         subcommand: sub,
@@ -93,7 +93,7 @@ async function gitInit(cwd: string, flags: GitFlags): Promise<void> {
 
 async function gitHooks(cwd: string, flags: GitFlags): Promise<void> {
   if (!await isGitRepo(cwd)) {
-    printPlainError(createPSetupError({ code: "GIT_NOT_A_REPO", command: "git", subcommand: "hooks", cwd }));
+    printPlainError(createSetuprError({ code: "GIT_NOT_A_REPO", command: "git", subcommand: "hooks", cwd }));
     return;
   }
 
@@ -139,7 +139,7 @@ async function gitHooks(cwd: string, flags: GitFlags): Promise<void> {
 
 async function gitFlow(cwd: string, flags: GitFlags): Promise<void> {
   if (!await isGitRepo(cwd)) {
-    printPlainError(createPSetupError({ code: "GIT_NOT_A_REPO", command: "git", subcommand: "flow", cwd }));
+    printPlainError(createSetuprError({ code: "GIT_NOT_A_REPO", command: "git", subcommand: "flow", cwd }));
     return;
   }
 
@@ -150,7 +150,7 @@ async function gitFlow(cwd: string, flags: GitFlags): Promise<void> {
   if (action === "feature") {
     const name = flags.args?.[1];
     if (!name) {
-      printPlainError(createPSetupError({ code: "GIT_COMMAND_FAILED", command: "git", subcommand: "flow", cwd, details: ["Usage: setup git flow feature <name>"] }));
+      printPlainError(createSetuprError({ code: "GIT_COMMAND_FAILED", command: "git", subcommand: "flow", cwd, details: ["Usage: setup git flow feature <name>"] }));
       return;
     }
     await runCommand(`git checkout -b feature/${name}`, cwd);
@@ -158,7 +158,7 @@ async function gitFlow(cwd: string, flags: GitFlags): Promise<void> {
   } else if (action === "hotfix") {
     const name = flags.args?.[1];
     if (!name) {
-      printPlainError(createPSetupError({ code: "GIT_COMMAND_FAILED", command: "git", subcommand: "flow", cwd, details: ["Usage: setup git flow hotfix <name>"] }));
+      printPlainError(createSetuprError({ code: "GIT_COMMAND_FAILED", command: "git", subcommand: "flow", cwd, details: ["Usage: setup git flow hotfix <name>"] }));
       return;
     }
     await runCommand(`git checkout ${main} && git pull && git checkout -b hotfix/${name}`, cwd);
@@ -166,7 +166,7 @@ async function gitFlow(cwd: string, flags: GitFlags): Promise<void> {
   } else if (action === "release") {
     const version = flags.args?.[1];
     if (!version) {
-      printPlainError(createPSetupError({ code: "GIT_COMMAND_FAILED", command: "git", subcommand: "flow", cwd, details: ["Usage: setup git flow release <version>"] }));
+      printPlainError(createSetuprError({ code: "GIT_COMMAND_FAILED", command: "git", subcommand: "flow", cwd, details: ["Usage: setup git flow release <version>"] }));
       return;
     }
     await runCommand(`git checkout -b release/${version}`, cwd);
@@ -193,7 +193,7 @@ async function gitFlow(cwd: string, flags: GitFlags): Promise<void> {
 
 async function gitCommit(cwd: string, flags: GitFlags): Promise<void> {
   if (!await isGitRepo(cwd)) {
-    printPlainError(createPSetupError({ code: "GIT_NOT_A_REPO", command: "git", subcommand: "commit", cwd }));
+    printPlainError(createSetuprError({ code: "GIT_NOT_A_REPO", command: "git", subcommand: "commit", cwd }));
     return;
   }
 
@@ -248,13 +248,13 @@ async function gitCommit(cwd: string, flags: GitFlags): Promise<void> {
   if (result.exitCode === 0) {
     console.log(chalk.green(`✓ Committed: ${message}`));
   } else {
-    printPlainError(createPSetupError({ code: "GIT_COMMAND_FAILED", command: "git", subcommand: "commit", cwd, details: [result.stderr] }));
+    printPlainError(createSetuprError({ code: "GIT_COMMAND_FAILED", command: "git", subcommand: "commit", cwd, details: [result.stderr] }));
   }
 }
 
 async function gitBranch(cwd: string, flags: GitFlags): Promise<void> {
   if (!await isGitRepo(cwd)) {
-    printPlainError(createPSetupError({ code: "GIT_NOT_A_REPO", command: "git", subcommand: "branch", cwd }));
+    printPlainError(createSetuprError({ code: "GIT_NOT_A_REPO", command: "git", subcommand: "branch", cwd }));
     return;
   }
 
@@ -274,14 +274,14 @@ async function gitBranch(cwd: string, flags: GitFlags): Promise<void> {
   } else if (action === "create") {
     const name = flags.args?.[1];
     if (!name) {
-      printPlainError(createPSetupError({ code: "GIT_COMMAND_FAILED", command: "git", subcommand: "branch", cwd, details: ["Usage: setup git branch create <name>"] }));
+      printPlainError(createSetuprError({ code: "GIT_COMMAND_FAILED", command: "git", subcommand: "branch", cwd, details: ["Usage: setup git branch create <name>"] }));
       return;
     }
     const result = await runCommand(`git checkout -b ${name}`, cwd);
     if (result.exitCode === 0) {
       console.log(chalk.green(`✓ Created and switched to ${name}`));
     } else {
-      printPlainError(createPSetupError({ code: "GIT_BRANCH_EXISTS", command: "git", subcommand: "branch", cwd, details: [result.stderr] }));
+      printPlainError(createSetuprError({ code: "GIT_BRANCH_EXISTS", command: "git", subcommand: "branch", cwd, details: [result.stderr] }));
     }
   } else if (action === "delete") {
     const name = flags.args?.[1];
@@ -291,7 +291,7 @@ async function gitBranch(cwd: string, flags: GitFlags): Promise<void> {
     if (result.exitCode === 0) {
       console.log(chalk.green(`✓ Deleted branch ${name}`));
     } else {
-      printPlainError(createPSetupError({ code: "GIT_COMMAND_FAILED", command: "git", subcommand: "branch", cwd, details: [result.stderr] }));
+      printPlainError(createSetuprError({ code: "GIT_COMMAND_FAILED", command: "git", subcommand: "branch", cwd, details: [result.stderr] }));
     }
   } else if (action === "switch") {
     const name = flags.args?.[1];
@@ -300,21 +300,21 @@ async function gitBranch(cwd: string, flags: GitFlags): Promise<void> {
     if (result.exitCode === 0) {
       console.log(chalk.green(`✓ Switched to ${name}`));
     } else {
-      printPlainError(createPSetupError({ code: "GIT_COMMAND_FAILED", command: "git", subcommand: "branch", cwd, details: [result.stderr] }));
+      printPlainError(createSetuprError({ code: "GIT_COMMAND_FAILED", command: "git", subcommand: "branch", cwd, details: [result.stderr] }));
     }
   } else {
     const result = await runCommand(`git checkout ${action}`, cwd);
     if (result.exitCode === 0) {
       console.log(chalk.green(`✓ Switched to ${action}`));
     } else {
-      printPlainError(createPSetupError({ code: "GIT_COMMAND_FAILED", command: "git", subcommand: "branch", cwd, details: [result.stderr] }));
+      printPlainError(createSetuprError({ code: "GIT_COMMAND_FAILED", command: "git", subcommand: "branch", cwd, details: [result.stderr] }));
     }
   }
 }
 
 async function gitPR(cwd: string, flags: GitFlags): Promise<void> {
   if (!await isGitRepo(cwd)) {
-    printPlainError(createPSetupError({ code: "GIT_NOT_A_REPO", command: "git", subcommand: "pr", cwd }));
+    printPlainError(createSetuprError({ code: "GIT_NOT_A_REPO", command: "git", subcommand: "pr", cwd }));
     return;
   }
 
@@ -329,7 +329,7 @@ async function gitPR(cwd: string, flags: GitFlags): Promise<void> {
         .replace(/\.git$/, "").replace("git@github.com:", "https://github.com/");
       console.log(chalk.green(`✓ Pushed. Create PR at: ${remote}/compare/${branch}`));
     } else {
-      printPlainError(createPSetupError({ code: "GIT_PUSH_FAILED", command: "git", subcommand: "pr", cwd, details: [pushResult.stderr] }));
+      printPlainError(createSetuprError({ code: "GIT_PUSH_FAILED", command: "git", subcommand: "pr", cwd, details: [pushResult.stderr] }));
     }
     return;
   }
@@ -342,7 +342,7 @@ async function gitPR(cwd: string, flags: GitFlags): Promise<void> {
     if (result.exitCode === 0) {
       console.log(chalk.green(`✓ PR created: ${result.stdout.trim()}`));
     } else {
-      printPlainError(createPSetupError({ code: "GIT_COMMAND_FAILED", command: "git", subcommand: "pr", cwd, details: [result.stderr] }));
+      printPlainError(createSetuprError({ code: "GIT_COMMAND_FAILED", command: "git", subcommand: "pr", cwd, details: [result.stderr] }));
     }
   } else if (action === "list") {
     const result = await runCommand("gh pr list", cwd);
@@ -355,7 +355,7 @@ async function gitPR(cwd: string, flags: GitFlags): Promise<void> {
 
 async function gitStash(cwd: string, flags: GitFlags): Promise<void> {
   if (!await isGitRepo(cwd)) {
-    printPlainError(createPSetupError({ code: "GIT_NOT_A_REPO", command: "git", subcommand: "stash", cwd }));
+    printPlainError(createSetuprError({ code: "GIT_NOT_A_REPO", command: "git", subcommand: "stash", cwd }));
     return;
   }
 
@@ -375,7 +375,7 @@ async function gitStash(cwd: string, flags: GitFlags): Promise<void> {
     if (result.exitCode === 0) {
       console.log(chalk.green("✓ Applied and dropped latest stash"));
     } else {
-      printPlainError(createPSetupError({ code: "GIT_MERGE_CONFLICT", command: "git", subcommand: "stash", cwd, details: [result.stderr] }));
+      printPlainError(createSetuprError({ code: "GIT_MERGE_CONFLICT", command: "git", subcommand: "stash", cwd, details: [result.stderr] }));
     }
   } else if (action === "list") {
     const result = await runCommand("git stash list", cwd);
@@ -391,7 +391,7 @@ async function gitStash(cwd: string, flags: GitFlags): Promise<void> {
     if (result.exitCode === 0) {
       console.log(chalk.green(`✓ Applied stash@{${index}}`));
     } else {
-      printPlainError(createPSetupError({ code: "GIT_COMMAND_FAILED", command: "git", subcommand: "stash", cwd, details: [result.stderr] }));
+      printPlainError(createSetuprError({ code: "GIT_COMMAND_FAILED", command: "git", subcommand: "stash", cwd, details: [result.stderr] }));
     }
   } else if (action === "drop") {
     const index = flags.args?.[1] || "0";
@@ -399,7 +399,7 @@ async function gitStash(cwd: string, flags: GitFlags): Promise<void> {
     if (result.exitCode === 0) {
       console.log(chalk.green(`✓ Dropped stash@{${index}}`));
     } else {
-      printPlainError(createPSetupError({ code: "GIT_COMMAND_FAILED", command: "git", subcommand: "stash", cwd, details: [result.stderr] }));
+      printPlainError(createSetuprError({ code: "GIT_COMMAND_FAILED", command: "git", subcommand: "stash", cwd, details: [result.stderr] }));
     }
   } else if (action === "clear") {
     if (!flags.force) {
@@ -413,7 +413,7 @@ async function gitStash(cwd: string, flags: GitFlags): Promise<void> {
 
 async function gitRebase(cwd: string, flags: GitFlags): Promise<void> {
   if (!await isGitRepo(cwd)) {
-    printPlainError(createPSetupError({ code: "GIT_NOT_A_REPO", command: "git", subcommand: "rebase", cwd }));
+    printPlainError(createSetuprError({ code: "GIT_NOT_A_REPO", command: "git", subcommand: "rebase", cwd }));
     return;
   }
 
@@ -426,7 +426,7 @@ async function gitRebase(cwd: string, flags: GitFlags): Promise<void> {
     if (result.exitCode === 0) {
       console.log(chalk.green(`✓ Rebased onto ${main}`));
     } else {
-      printPlainError(createPSetupError({ code: "GIT_MERGE_CONFLICT", command: "git", subcommand: "rebase", cwd, details: ["Run 'git rebase --abort' to cancel or resolve conflicts manually."] }));
+      printPlainError(createSetuprError({ code: "GIT_MERGE_CONFLICT", command: "git", subcommand: "rebase", cwd, details: ["Run 'git rebase --abort' to cancel or resolve conflicts manually."] }));
     }
     return;
   }
@@ -439,21 +439,21 @@ async function gitRebase(cwd: string, flags: GitFlags): Promise<void> {
     if (result.exitCode === 0) {
       console.log(chalk.green("✓ Rebase continued"));
     } else {
-      printPlainError(createPSetupError({ code: "GIT_MERGE_CONFLICT", command: "git", subcommand: "rebase", cwd, details: [result.stderr] }));
+      printPlainError(createSetuprError({ code: "GIT_MERGE_CONFLICT", command: "git", subcommand: "rebase", cwd, details: [result.stderr] }));
     }
   } else {
     const result = await runCommand(`git rebase ${target}`, cwd);
     if (result.exitCode === 0) {
       console.log(chalk.green(`✓ Rebased onto ${target}`));
     } else {
-      printPlainError(createPSetupError({ code: "GIT_MERGE_CONFLICT", command: "git", subcommand: "rebase", cwd, details: [result.stderr] }));
+      printPlainError(createSetuprError({ code: "GIT_MERGE_CONFLICT", command: "git", subcommand: "rebase", cwd, details: [result.stderr] }));
     }
   }
 }
 
 async function gitTag(cwd: string, flags: GitFlags): Promise<void> {
   if (!await isGitRepo(cwd)) {
-    printPlainError(createPSetupError({ code: "GIT_NOT_A_REPO", command: "git", subcommand: "tag", cwd }));
+    printPlainError(createSetuprError({ code: "GIT_NOT_A_REPO", command: "git", subcommand: "tag", cwd }));
     return;
   }
 
@@ -472,7 +472,7 @@ async function gitTag(cwd: string, flags: GitFlags): Promise<void> {
   } else if (action === "create") {
     const version = flags.args?.[1];
     if (!version) {
-      printPlainError(createPSetupError({ code: "GIT_COMMAND_FAILED", command: "git", subcommand: "tag", cwd, details: ["Usage: setup git tag create <version>"] }));
+      printPlainError(createSetuprError({ code: "GIT_COMMAND_FAILED", command: "git", subcommand: "tag", cwd, details: ["Usage: setup git tag create <version>"] }));
       return;
     }
     const message = flags.message || `Release ${version}`;
@@ -480,14 +480,14 @@ async function gitTag(cwd: string, flags: GitFlags): Promise<void> {
     if (result.exitCode === 0) {
       console.log(chalk.green(`✓ Created tag ${version}`));
     } else {
-      printPlainError(createPSetupError({ code: "GIT_COMMAND_FAILED", command: "git", subcommand: "tag", cwd, details: [result.stderr] }));
+      printPlainError(createSetuprError({ code: "GIT_COMMAND_FAILED", command: "git", subcommand: "tag", cwd, details: [result.stderr] }));
     }
   } else if (action === "push") {
     const result = await runCommand("git push --tags", cwd);
     if (result.exitCode === 0) {
       console.log(chalk.green("✓ Pushed all tags to remote"));
     } else {
-      printPlainError(createPSetupError({ code: "GIT_PUSH_FAILED", command: "git", subcommand: "tag", cwd, details: [result.stderr] }));
+      printPlainError(createSetuprError({ code: "GIT_PUSH_FAILED", command: "git", subcommand: "tag", cwd, details: [result.stderr] }));
     }
   } else if (action === "delete") {
     const tag = flags.args?.[1];
@@ -501,14 +501,14 @@ async function gitTag(cwd: string, flags: GitFlags): Promise<void> {
     if (result.exitCode === 0) {
       console.log(chalk.green(`✓ Created tag ${version}`));
     } else {
-      printPlainError(createPSetupError({ code: "GIT_COMMAND_FAILED", command: "git", subcommand: "tag", cwd, details: [result.stderr] }));
+      printPlainError(createSetuprError({ code: "GIT_COMMAND_FAILED", command: "git", subcommand: "tag", cwd, details: [result.stderr] }));
     }
   }
 }
 
 async function gitRelease(cwd: string, flags: GitFlags): Promise<void> {
   if (!await isGitRepo(cwd)) {
-    printPlainError(createPSetupError({ code: "GIT_NOT_A_REPO", command: "git", subcommand: "release", cwd }));
+    printPlainError(createSetuprError({ code: "GIT_NOT_A_REPO", command: "git", subcommand: "release", cwd }));
     return;
   }
 
@@ -562,7 +562,7 @@ async function gitRelease(cwd: string, flags: GitFlags): Promise<void> {
 
 async function gitStatus(cwd: string): Promise<void> {
   if (!await isGitRepo(cwd)) {
-    printPlainError(createPSetupError({ code: "GIT_NOT_A_REPO", command: "git", subcommand: "status", cwd }));
+    printPlainError(createSetuprError({ code: "GIT_NOT_A_REPO", command: "git", subcommand: "status", cwd }));
     return;
   }
 
@@ -601,7 +601,7 @@ async function gitStatus(cwd: string): Promise<void> {
 
 async function gitLog(cwd: string): Promise<void> {
   if (!await isGitRepo(cwd)) {
-    printPlainError(createPSetupError({ code: "GIT_NOT_A_REPO", command: "git", subcommand: "log", cwd }));
+    printPlainError(createSetuprError({ code: "GIT_NOT_A_REPO", command: "git", subcommand: "log", cwd }));
     return;
   }
 
@@ -612,7 +612,7 @@ async function gitLog(cwd: string): Promise<void> {
 
 async function gitSync(cwd: string): Promise<void> {
   if (!await isGitRepo(cwd)) {
-    printPlainError(createPSetupError({ code: "GIT_NOT_A_REPO", command: "git", subcommand: "sync", cwd }));
+    printPlainError(createSetuprError({ code: "GIT_NOT_A_REPO", command: "git", subcommand: "sync", cwd }));
     return;
   }
 
@@ -622,7 +622,7 @@ async function gitSync(cwd: string): Promise<void> {
   if (pullResult.exitCode === 0) {
     console.log(chalk.green("  ✓ Pulled latest changes"));
   } else if (pullResult.stderr.includes("conflict")) {
-    printPlainError(createPSetupError({ code: "GIT_MERGE_CONFLICT", command: "git", subcommand: "sync", cwd, details: [pullResult.stderr] }));
+    printPlainError(createSetuprError({ code: "GIT_MERGE_CONFLICT", command: "git", subcommand: "sync", cwd, details: [pullResult.stderr] }));
     return;
   }
 
@@ -640,7 +640,7 @@ async function gitSync(cwd: string): Promise<void> {
 
 async function gitClean(cwd: string, flags: GitFlags): Promise<void> {
   if (!await isGitRepo(cwd)) {
-    printPlainError(createPSetupError({ code: "GIT_NOT_A_REPO", command: "git", subcommand: "clean", cwd }));
+    printPlainError(createSetuprError({ code: "GIT_NOT_A_REPO", command: "git", subcommand: "clean", cwd }));
     return;
   }
 
@@ -700,7 +700,7 @@ function generateGitignore(language: string | null, framework: string | null, pm
   lines.push("", "# IDE", ".vscode/", ".idea/", "*.swp", "*.swo", ".DS_Store");
   lines.push("", "# Testing", "coverage/", ".nyc_output/");
   lines.push("", "# Logs", "*.log", "npm-debug.log*", "yarn-debug.log*", "pnpm-debug.log*");
-  lines.push("", "# P-Setup", ".p-setup/");
+  lines.push("", "# Setupr", ".setupr/");
 
   return lines.join("\n") + "\n";
 }
@@ -726,7 +726,7 @@ async function gitIgnore(cwd: string, flags: GitFlags): Promise<void> {
       return;
     }
 
-    const updated = existing.trimEnd() + "\n\n# Added by P-Setup\n" + newEntries.join("\n") + "\n";
+    const updated = existing.trimEnd() + "\n\n# Added by Setupr\n" + newEntries.join("\n") + "\n";
     await writeFile(gitignorePath, updated);
     console.log(chalk.green(`✓ Added ${newEntries.length} entries to .gitignore`));
   } else {
@@ -738,7 +738,7 @@ async function gitIgnore(cwd: string, flags: GitFlags): Promise<void> {
 
 async function gitChangelog(cwd: string, flags: GitFlags): Promise<void> {
   if (!await isGitRepo(cwd)) {
-    printPlainError(createPSetupError({ code: "GIT_NOT_A_REPO", command: "git", subcommand: "changelog", cwd }));
+    printPlainError(createSetuprError({ code: "GIT_NOT_A_REPO", command: "git", subcommand: "changelog", cwd }));
     return;
   }
 
@@ -804,13 +804,13 @@ async function gitChangelog(cwd: string, flags: GitFlags): Promise<void> {
 
 async function gitBlame(cwd: string, flags: GitFlags): Promise<void> {
   if (!await isGitRepo(cwd)) {
-    printPlainError(createPSetupError({ code: "GIT_NOT_A_REPO", command: "git", subcommand: "blame", cwd }));
+    printPlainError(createSetuprError({ code: "GIT_NOT_A_REPO", command: "git", subcommand: "blame", cwd }));
     return;
   }
 
   const file = flags.args?.[0];
   if (!file) {
-    printPlainError(createPSetupError({ code: "GIT_COMMAND_FAILED", command: "git", subcommand: "blame", cwd, details: ["Usage: setup git blame <file>"] }));
+    printPlainError(createSetuprError({ code: "GIT_COMMAND_FAILED", command: "git", subcommand: "blame", cwd, details: ["Usage: setup git blame <file>"] }));
     return;
   }
 
@@ -824,19 +824,19 @@ async function gitBlame(cwd: string, flags: GitFlags): Promise<void> {
     console.log(chalk.blue.bold(`\n  Blame: ${file}\n`));
     console.log(result.stdout);
   } else {
-    printPlainError(createPSetupError({ code: "GIT_COMMAND_FAILED", command: "git", subcommand: "blame", cwd, details: [result.stderr] }));
+    printPlainError(createSetuprError({ code: "GIT_COMMAND_FAILED", command: "git", subcommand: "blame", cwd, details: [result.stderr] }));
   }
 }
 
 async function gitCherryPick(cwd: string, flags: GitFlags): Promise<void> {
   if (!await isGitRepo(cwd)) {
-    printPlainError(createPSetupError({ code: "GIT_NOT_A_REPO", command: "git", subcommand: "cherry-pick", cwd }));
+    printPlainError(createSetuprError({ code: "GIT_NOT_A_REPO", command: "git", subcommand: "cherry-pick", cwd }));
     return;
   }
 
   const commit = flags.args?.[0];
   if (!commit) {
-    printPlainError(createPSetupError({ code: "GIT_COMMAND_FAILED", command: "git", subcommand: "cherry-pick", cwd, details: ["Usage: setup git cherry-pick <commit-hash>"] }));
+    printPlainError(createSetuprError({ code: "GIT_COMMAND_FAILED", command: "git", subcommand: "cherry-pick", cwd, details: ["Usage: setup git cherry-pick <commit-hash>"] }));
     return;
   }
 
@@ -848,7 +848,7 @@ async function gitCherryPick(cwd: string, flags: GitFlags): Promise<void> {
   if (commit === "continue") {
     const result = await runCommand("git cherry-pick --continue", cwd);
     if (result.exitCode === 0) console.log(chalk.green("✓ Cherry-pick continued"));
-    else printPlainError(createPSetupError({ code: "GIT_MERGE_CONFLICT", command: "git", subcommand: "cherry-pick", cwd, details: [result.stderr] }));
+    else printPlainError(createSetuprError({ code: "GIT_MERGE_CONFLICT", command: "git", subcommand: "cherry-pick", cwd, details: [result.stderr] }));
     return;
   }
 
@@ -856,13 +856,13 @@ async function gitCherryPick(cwd: string, flags: GitFlags): Promise<void> {
   if (result.exitCode === 0) {
     console.log(chalk.green(`✓ Cherry-picked ${commit}`));
   } else {
-    printPlainError(createPSetupError({ code: "GIT_MERGE_CONFLICT", command: "git", subcommand: "cherry-pick", cwd, details: ["Resolve conflicts, then run: setup git cherry-pick continue"] }));
+    printPlainError(createSetuprError({ code: "GIT_MERGE_CONFLICT", command: "git", subcommand: "cherry-pick", cwd, details: ["Resolve conflicts, then run: setup git cherry-pick continue"] }));
   }
 }
 
 async function gitWorktree(cwd: string, flags: GitFlags): Promise<void> {
   if (!await isGitRepo(cwd)) {
-    printPlainError(createPSetupError({ code: "GIT_NOT_A_REPO", command: "git", subcommand: "worktree", cwd }));
+    printPlainError(createSetuprError({ code: "GIT_NOT_A_REPO", command: "git", subcommand: "worktree", cwd }));
     return;
   }
 
@@ -876,14 +876,14 @@ async function gitWorktree(cwd: string, flags: GitFlags): Promise<void> {
     const branch = flags.args?.[1];
     const path = flags.args?.[2] || `../${branch}`;
     if (!branch) {
-      printPlainError(createPSetupError({ code: "GIT_COMMAND_FAILED", command: "git", subcommand: "worktree", cwd, details: ["Usage: setup git worktree add <branch> [path]"] }));
+      printPlainError(createSetuprError({ code: "GIT_COMMAND_FAILED", command: "git", subcommand: "worktree", cwd, details: ["Usage: setup git worktree add <branch> [path]"] }));
       return;
     }
     const result = await runCommand(`git worktree add "${path}" ${branch}`, cwd);
     if (result.exitCode === 0) {
       console.log(chalk.green(`✓ Created worktree at ${path} (branch: ${branch})`));
     } else {
-      printPlainError(createPSetupError({ code: "GIT_COMMAND_FAILED", command: "git", subcommand: "worktree", cwd, details: [result.stderr] }));
+      printPlainError(createSetuprError({ code: "GIT_COMMAND_FAILED", command: "git", subcommand: "worktree", cwd, details: [result.stderr] }));
     }
   } else if (action === "remove") {
     const path = flags.args?.[1];
@@ -892,7 +892,7 @@ async function gitWorktree(cwd: string, flags: GitFlags): Promise<void> {
     if (result.exitCode === 0) {
       console.log(chalk.green(`✓ Removed worktree at ${path}`));
     } else {
-      printPlainError(createPSetupError({ code: "GIT_COMMAND_FAILED", command: "git", subcommand: "worktree", cwd, details: [result.stderr] }));
+      printPlainError(createSetuprError({ code: "GIT_COMMAND_FAILED", command: "git", subcommand: "worktree", cwd, details: [result.stderr] }));
     }
   } else if (action === "prune") {
     await runCommand("git worktree prune", cwd);
@@ -902,7 +902,7 @@ async function gitWorktree(cwd: string, flags: GitFlags): Promise<void> {
 
 async function gitBisect(cwd: string, flags: GitFlags): Promise<void> {
   if (!await isGitRepo(cwd)) {
-    printPlainError(createPSetupError({ code: "GIT_NOT_A_REPO", command: "git", subcommand: "bisect", cwd }));
+    printPlainError(createSetuprError({ code: "GIT_NOT_A_REPO", command: "git", subcommand: "bisect", cwd }));
     return;
   }
 
@@ -912,7 +912,7 @@ async function gitBisect(cwd: string, flags: GitFlags): Promise<void> {
     const bad = flags.args?.[1] || "HEAD";
     const good = flags.args?.[2];
     if (!good) {
-      printPlainError(createPSetupError({ code: "GIT_COMMAND_FAILED", command: "git", subcommand: "bisect", cwd, details: ["Usage: setup git bisect start [bad] <good>"] }));
+      printPlainError(createSetuprError({ code: "GIT_COMMAND_FAILED", command: "git", subcommand: "bisect", cwd, details: ["Usage: setup git bisect start [bad] <good>"] }));
       return;
     }
     await runCommand(`git bisect start ${bad} ${good}`, cwd);
@@ -935,7 +935,7 @@ async function gitBisect(cwd: string, flags: GitFlags): Promise<void> {
 
 async function gitContributors(cwd: string): Promise<void> {
   if (!await isGitRepo(cwd)) {
-    printPlainError(createPSetupError({ code: "GIT_NOT_A_REPO", command: "git", subcommand: "contributors", cwd }));
+    printPlainError(createSetuprError({ code: "GIT_NOT_A_REPO", command: "git", subcommand: "contributors", cwd }));
     return;
   }
 
@@ -959,7 +959,7 @@ async function gitContributors(cwd: string): Promise<void> {
 
 async function gitUndo(cwd: string, flags: GitFlags): Promise<void> {
   if (!await isGitRepo(cwd)) {
-    printPlainError(createPSetupError({ code: "GIT_NOT_A_REPO", command: "git", subcommand: "undo", cwd }));
+    printPlainError(createSetuprError({ code: "GIT_NOT_A_REPO", command: "git", subcommand: "undo", cwd }));
     return;
   }
 
@@ -970,7 +970,7 @@ async function gitUndo(cwd: string, flags: GitFlags): Promise<void> {
     if (result.exitCode === 0) {
       console.log(chalk.green("✓ Undid last commit (changes kept staged)"));
     } else {
-      printPlainError(createPSetupError({ code: "GIT_COMMAND_FAILED", command: "git", subcommand: "undo", cwd, details: [result.stderr] }));
+      printPlainError(createSetuprError({ code: "GIT_COMMAND_FAILED", command: "git", subcommand: "undo", cwd, details: [result.stderr] }));
     }
   } else if (action === "stage" || action === "add") {
     await runCommand("git reset HEAD", cwd);
@@ -996,7 +996,7 @@ function generateHooks(pm: string | null, language: string | null): Record<strin
   const hooks: Record<string, string> = {};
 
   hooks["pre-commit"] = `#!/bin/sh
-# P-Setup pre-commit hook
+# Setupr pre-commit hook
 # Run lint and format checks before committing
 
 ${runner} run lint 2>/dev/null
@@ -1013,7 +1013,7 @@ fi` : ""}
 `;
 
   hooks["commit-msg"] = `#!/bin/sh
-# P-Setup commit-msg hook
+# Setupr commit-msg hook
 # Validates conventional commit format
 
 MSG=$(cat "$1")
@@ -1028,7 +1028,7 @@ fi
 `;
 
   hooks["pre-push"] = `#!/bin/sh
-# P-Setup pre-push hook
+# Setupr pre-push hook
 # Run tests before pushing
 
 ${runner} run test 2>/dev/null

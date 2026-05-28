@@ -5,7 +5,7 @@ import { planSteps } from "../ai/planner.js";
 import { executeStep, runCommand } from "../executor/index.js";
 import { createAppStore } from "../state/store.js";
 import { hasProjectSignals } from "../tui/projectSignals.js";
-import { createPSetupError, printPlainError, classifyCommandFailure } from "../errors/index.js";
+import { createSetuprError, printPlainError, classifyCommandFailure } from "../errors/index.js";
 import { deleteCheckpoint, formatCheckpointAge, loadCheckpoint, saveCheckpoint } from "../state/checkpoint.js";
 
 interface PlainOptions {
@@ -30,7 +30,7 @@ export async function runPlainMode(command: string, cwd: string, sub?: string, _
       await plainClean(cwd, sub);
       break;
     default:
-      printPlainError(createPSetupError({
+      printPlainError(createSetuprError({
         code: "UNKNOWN_COMMAND",
         command,
         cwd,
@@ -61,7 +61,7 @@ async function plainSetup(cwd: string): Promise<void> {
   }
 
   if (!hasProjectSignals(scan)) {
-    printPlainError(createPSetupError({
+    printPlainError(createSetuprError({
       code: "NO_PROJECT_DETECTED",
       command: "setup",
       cwd,
@@ -131,7 +131,7 @@ async function plainDoctor(cwd: string): Promise<void> {
   const scan = await scanProject(cwd);
   spinner.stop();
 
-  console.log(chalk.blue.bold("\n  P-Setup Doctor\n"));
+  console.log(chalk.blue.bold("\n  Setupr Doctor\n"));
 
   // Runtime
   if (scan.runtime) {
@@ -181,7 +181,7 @@ async function plainStart(cwd: string): Promise<void> {
   else if (scan.scripts.start) cmd = `${pm} run start`;
 
   if (!cmd) {
-    printPlainError(createPSetupError({
+    printPlainError(createSetuprError({
       code: "MISSING_SCRIPT",
       command: "start",
       cwd,
@@ -247,7 +247,7 @@ async function plainClean(cwd: string, mode?: string): Promise<void> {
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
       if (!/ENOENT/.test(message)) {
-        printPlainError(createPSetupError({
+        printPlainError(createSetuprError({
           code: "CLEAN_TARGET_FAILED",
           command: "clean",
           subcommand: mode || "deps",

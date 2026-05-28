@@ -3,7 +3,7 @@ import { readFile, readdir, stat } from "fs/promises";
 import { existsSync } from "fs";
 import { join } from "path";
 import { runCommand } from "../../executor/index.js";
-import { createPSetupError, printPlainError } from "../../errors/index.js";
+import { createSetuprError, printPlainError } from "../../errors/index.js";
 import { scanProject } from "../../scanner/index.js";
 
 interface WorkspaceFlags {
@@ -21,7 +21,7 @@ export async function cmdWorkspace(sub: string | undefined, cwd: string, flags: 
     case "info": return workspaceInfo(cwd);
     case "check": return workspaceCheck(cwd);
     default:
-      printPlainError(createPSetupError({
+      printPlainError(createSetuprError({
         code: "UNKNOWN_SUBCOMMAND",
         command: "workspace",
         subcommand: sub,
@@ -81,7 +81,7 @@ async function workspaceList(cwd: string): Promise<void> {
   const packages = await getWorkspacePackages(cwd);
 
   if (packages.length === 0) {
-    printPlainError(createPSetupError({ code: "WORKSPACE_NO_PACKAGES", command: "workspace", subcommand: "list", cwd }));
+    printPlainError(createSetuprError({ code: "WORKSPACE_NO_PACKAGES", command: "workspace", subcommand: "list", cwd }));
     return;
   }
 
@@ -101,7 +101,7 @@ async function workspaceRun(cwd: string, flags: WorkspaceFlags): Promise<void> {
 
   const packages = await getWorkspacePackages(cwd);
   if (packages.length === 0) {
-    printPlainError(createPSetupError({ code: "WORKSPACE_NO_PACKAGES", command: "workspace", subcommand: "run", cwd }));
+    printPlainError(createSetuprError({ code: "WORKSPACE_NO_PACKAGES", command: "workspace", subcommand: "run", cwd }));
     return;
   }
 
@@ -142,7 +142,7 @@ async function workspaceRun(cwd: string, flags: WorkspaceFlags): Promise<void> {
   if (failed === 0) {
     console.log(chalk.green(`✓ All ${passed} package(s) passed`));
   } else {
-    printPlainError(createPSetupError({
+    printPlainError(createSetuprError({
       code: "WORKSPACE_COMMAND_FAILED",
       command: "workspace",
       subcommand: "run",
@@ -160,7 +160,7 @@ async function workspaceExec(cwd: string, flags: WorkspaceFlags): Promise<void> 
   }
 
   if (!/^[a-zA-Z0-9\s._/-]+$/.test(cmd)) {
-    printPlainError(createPSetupError({ code: "COMMAND_FAILED", command: "workspace", subcommand: "exec", cwd, details: ["Invalid command characters."] }));
+    printPlainError(createSetuprError({ code: "COMMAND_FAILED", command: "workspace", subcommand: "exec", cwd, details: ["Invalid command characters."] }));
     return;
   }
 
@@ -230,7 +230,7 @@ async function workspaceInfo(cwd: string): Promise<void> {
 async function workspaceCheck(cwd: string): Promise<void> {
   const packages = await getWorkspacePackages(cwd);
   if (packages.length === 0) {
-    printPlainError(createPSetupError({ code: "WORKSPACE_NO_PACKAGES", command: "workspace", subcommand: "check", cwd }));
+    printPlainError(createSetuprError({ code: "WORKSPACE_NO_PACKAGES", command: "workspace", subcommand: "check", cwd }));
     return;
   }
 

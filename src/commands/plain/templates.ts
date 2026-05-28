@@ -3,7 +3,7 @@ import { mkdir, writeFile, readdir, rm } from "fs/promises";
 import { existsSync } from "fs";
 import { join } from "path";
 import { runCommand } from "../../executor/index.js";
-import { createPSetupError, printPlainError } from "../../errors/index.js";
+import { createSetuprError, printPlainError } from "../../errors/index.js";
 
 interface TemplateFlags {
   force?: boolean;
@@ -11,7 +11,7 @@ interface TemplateFlags {
   [key: string]: unknown;
 }
 
-const TEMPLATES_DIR = ".p-setup/templates";
+const TEMPLATES_DIR = ".setupr/templates";
 
 export async function cmdTemplate(sub: string | undefined, cwd: string, flags: TemplateFlags): Promise<void> {
   switch (sub) {
@@ -20,7 +20,7 @@ export async function cmdTemplate(sub: string | undefined, cwd: string, flags: T
     case "save": return templateSave(cwd, flags);
     case "remove": return templateRemove(cwd, flags);
     default:
-      printPlainError(createPSetupError({
+      printPlainError(createSetuprError({
         code: "UNKNOWN_SUBCOMMAND",
         command: "template",
         subcommand: sub,
@@ -33,7 +33,7 @@ export async function cmdTemplate(sub: string | undefined, cwd: string, flags: T
 async function templateNew(cwd: string, flags: TemplateFlags): Promise<void> {
   const source = flags.args?.[0];
   if (!source) {
-    printPlainError(createPSetupError({
+    printPlainError(createSetuprError({
       code: "TEMPLATE_NOT_FOUND",
       command: "template",
       subcommand: "new",
@@ -59,7 +59,7 @@ async function templateNew(cwd: string, flags: TemplateFlags): Promise<void> {
 
   const cloneResult = await runCommand(`git clone --depth 1 ${repoUrl} "${targetDir}/.__temp_template"`, cwd);
   if (cloneResult.exitCode !== 0) {
-    printPlainError(createPSetupError({
+    printPlainError(createSetuprError({
       code: "TEMPLATE_FETCH_FAILED",
       command: "template",
       cwd,

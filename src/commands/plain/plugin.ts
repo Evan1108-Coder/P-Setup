@@ -1,7 +1,7 @@
 import chalk from "chalk";
 import { readFile, writeFile, mkdir, readdir, rm } from "fs/promises";
 import { join } from "path";
-import { createPSetupError, printPlainError } from "../../errors/index.js";
+import { createSetuprError, printPlainError } from "../../errors/index.js";
 import { loadConfig, saveConfig } from "../../state/config.js";
 import { runCommand } from "../../executor/index.js";
 
@@ -40,7 +40,7 @@ export async function cmdPlugin(
       break;
     default:
       printPlainError(
-        createPSetupError({
+        createSetuprError({
           code: "UNKNOWN_SUBCOMMAND",
           command: "plugin",
           subcommand: sub,
@@ -55,7 +55,7 @@ async function pluginInstall(cwd: string, flags: { args?: string[]; force?: bool
   const name = flags.args?.[0];
   if (!name) {
     printPlainError(
-      createPSetupError({
+      createSetuprError({
         code: "PLUGIN_NOT_FOUND",
         command: "plugin",
         subcommand: "install",
@@ -66,7 +66,7 @@ async function pluginInstall(cwd: string, flags: { args?: string[]; force?: bool
     return;
   }
 
-  const pluginsDir = join(cwd, ".p-setup", "plugins");
+  const pluginsDir = join(cwd, ".setupr", "plugins");
   await mkdir(pluginsDir, { recursive: true });
 
   const isUrl = name.startsWith("http") || name.includes("/");
@@ -83,7 +83,7 @@ async function pluginInstall(cwd: string, flags: { args?: string[]; force?: bool
       const result = await runCommand(`npm pack ${name} --pack-destination ${pluginDir}`, cwd);
       if (result.exitCode !== 0) {
         printPlainError(
-          createPSetupError({
+          createSetuprError({
             code: "PLUGIN_REGISTRY_FAILED",
             command: "plugin",
             subcommand: "install",
@@ -107,7 +107,7 @@ async function pluginInstall(cwd: string, flags: { args?: string[]; force?: bool
     }
   } catch (err) {
     printPlainError(
-      createPSetupError({
+      createSetuprError({
         code: "PLUGIN_LOAD_FAILED",
         command: "plugin",
         subcommand: "install",
@@ -122,7 +122,7 @@ async function pluginRemove(cwd: string, flags: { args?: string[] }): Promise<vo
   const name = flags.args?.[0];
   if (!name) {
     printPlainError(
-      createPSetupError({
+      createSetuprError({
         code: "PLUGIN_NOT_FOUND",
         command: "plugin",
         subcommand: "remove",
@@ -133,7 +133,7 @@ async function pluginRemove(cwd: string, flags: { args?: string[] }): Promise<vo
     return;
   }
 
-  const pluginDir = join(cwd, ".p-setup", "plugins", name);
+  const pluginDir = join(cwd, ".setupr", "plugins", name);
   try {
     await rm(pluginDir, { recursive: true, force: true });
   } catch {}
@@ -168,7 +168,7 @@ async function pluginInfo(cwd: string, flags: { args?: string[] }): Promise<void
   const name = flags.args?.[0];
   if (!name) {
     printPlainError(
-      createPSetupError({
+      createSetuprError({
         code: "PLUGIN_NOT_FOUND",
         command: "plugin",
         subcommand: "info",
@@ -179,7 +179,7 @@ async function pluginInfo(cwd: string, flags: { args?: string[] }): Promise<void
     return;
   }
 
-  const pluginDir = join(cwd, ".p-setup", "plugins", name);
+  const pluginDir = join(cwd, ".setupr", "plugins", name);
   try {
     const manifestPath = join(pluginDir, "package.json");
     const raw = await readFile(manifestPath, "utf-8");
@@ -194,7 +194,7 @@ async function pluginInfo(cwd: string, flags: { args?: string[] }): Promise<void
     console.log("");
   } catch {
     printPlainError(
-      createPSetupError({
+      createSetuprError({
         code: "PLUGIN_NOT_FOUND",
         command: "plugin",
         subcommand: "info",
@@ -209,7 +209,7 @@ async function pluginToggle(cwd: string, flags: { args?: string[] }, enable: boo
   const name = flags.args?.[0];
   if (!name) {
     printPlainError(
-      createPSetupError({
+      createSetuprError({
         code: "PLUGIN_NOT_FOUND",
         command: "plugin",
         subcommand: enable ? "enable" : "disable",
@@ -224,7 +224,7 @@ async function pluginToggle(cwd: string, flags: { args?: string[] }, enable: boo
   const plugin = (config.plugins || []).find((p) => p.name === name);
   if (!plugin) {
     printPlainError(
-      createPSetupError({
+      createSetuprError({
         code: "PLUGIN_NOT_FOUND",
         command: "plugin",
         subcommand: enable ? "enable" : "disable",

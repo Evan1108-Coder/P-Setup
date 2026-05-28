@@ -11,7 +11,7 @@ import { hasProjectSignals } from "../projectSignals.js";
 import { runCommand } from "../../executor/index.js";
 import { intelligentResponse } from "../../ai/intelligence.js";
 import { scanResultToDSL } from "../../ai/dsl.js";
-import { classifyCommandFailure, createPSetupError, sanitizeSecret, type PSetupError } from "../../errors/index.js";
+import { classifyCommandFailure, createSetuprError, sanitizeSecret, type SetuprError } from "../../errors/index.js";
 import type { ScanResult } from "../../scanner/index.js";
 
 interface StartLayoutProps {
@@ -35,7 +35,7 @@ export function StartLayout({ scan, cwd }: StartLayoutProps) {
   const focus = useFocusNavigation({ items: focusItems, onQuit: () => exit() });
   const [status, setStatus] = useState<"detecting" | "running" | "failed" | "stopped">("detecting");
   const [command, setCommand] = useState<string | null>(null);
-  const [error, setError] = useState<PSetupError | null>(null);
+  const [error, setError] = useState<SetuprError | null>(null);
   const [output, setOutput] = useState<string[]>([]);
   const [chatMessages, setChatMessages] = useState<string[]>([]);
   const noProject = !hasProjectSignals(scan);
@@ -68,7 +68,7 @@ export function StartLayout({ scan, cwd }: StartLayoutProps) {
         }
       });
     } else {
-      setError(createPSetupError({
+      setError(createSetuprError({
         code: noProject ? "NO_PROJECT_DETECTED" : "MISSING_SCRIPT",
         command: "start",
         cwd,
@@ -95,7 +95,7 @@ export function StartLayout({ scan, cwd }: StartLayoutProps) {
   return (
     <Box flexDirection="column" width={terminal.width} height={terminal.height}>
       <Box height={1} justifyContent="space-between">
-        <Text color={colors.primary} bold> P-Setup Start</Text>
+        <Text color={colors.primary} bold> Setupr Start</Text>
         <Text color={status === "running" ? colors.success : status === "failed" ? colors.error : colors.textDim}>
           {status === "running" ? `${icons.dot} LIVE` : noProject ? "no project" : status}
         </Text>

@@ -25,7 +25,7 @@ describe("AI intelligence tiers", () => {
   let tempDir: string;
 
   beforeEach(async () => {
-    tempDir = await mkdtemp(join(tmpdir(), "p-setup-intelligence-"));
+    tempDir = await mkdtemp(join(tmpdir(), "setupr-intelligence-"));
     chdir(tempDir);
     env.HOME = join(tempDir, "home");
     await mkdir(env.HOME, { recursive: true });

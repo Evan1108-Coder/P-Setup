@@ -3,14 +3,14 @@ import type { SetupStep } from "../ai/planner.js";
 import type { AppStore } from "../state/store.js";
 import { createSnapshot } from "./undo.js";
 import { initEnvFile } from "../env/index.js";
-import { classifyCommandFailure, createPSetupError, errorSummary, type PSetupError } from "../errors/index.js";
+import { classifyCommandFailure, createSetuprError, errorSummary, type SetuprError } from "../errors/index.js";
 import { saveCheckpoint } from "../state/checkpoint.js";
 
 export interface ExecutionResult {
   success: boolean;
   output: string;
   error?: string;
-  psetupError?: PSetupError;
+  psetupError?: SetuprError;
   duration: number;
 }
 
@@ -99,7 +99,7 @@ async function handleSpecialStep(
       try {
         const result = await initEnvFile(cwd);
         if (result.skipped) {
-          const psetupError = createPSetupError({
+          const psetupError = createSetuprError({
             code: result.reason === "missing-example" ? "ENV_TEMPLATE_MISSING" : "ENV_ALREADY_EXISTS",
             cwd,
             command: "setup",
@@ -124,7 +124,7 @@ async function handleSpecialStep(
             : "Created empty .env file";
         store.getState().addLog({ content: `✓ ${message}`, type: "success" });
       } catch (err) {
-        const psetupError = createPSetupError({
+        const psetupError = createSetuprError({
           code: "ENV_WRITE_FAILED",
           cwd,
           command: "setup",

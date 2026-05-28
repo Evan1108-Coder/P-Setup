@@ -109,7 +109,7 @@ export async function intelligentResponse(
   const systemMsg: ChatMessage = {
     role: "system",
     content: [
-      "You are P-Setup's AI director — the worker and coordinator for this project setup session.",
+      "You are Setupr's AI director — the worker and coordinator for this project setup session.",
       `Project context: ${contextDSL}.`,
       options.directorContext
         ? `Full director context packet: ${options.directorContext}.`

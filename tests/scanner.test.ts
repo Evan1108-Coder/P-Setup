@@ -8,7 +8,7 @@ describe("Scanner", () => {
   let tempDir: string;
 
   beforeEach(async () => {
-    tempDir = await mkdtemp(join(tmpdir(), "p-setup-test-"));
+    tempDir = await mkdtemp(join(tmpdir(), "setupr-test-"));
   });
 
   afterEach(async () => {
@@ -110,9 +110,9 @@ describe("Scanner", () => {
     expect(result.monorepo?.type).toBe("npm-workspaces");
   });
 
-  it("respects .p-setup.json config", async () => {
+  it("respects .setupr.json config", async () => {
     await writeFile(
-      join(tempDir, ".p-setup.json"),
+      join(tempDir, ".setupr.json"),
       JSON.stringify({ language: "Elixir", framework: "Phoenix" })
     );
     await writeFile(join(tempDir, "package.json"), JSON.stringify({ dependencies: { react: "18" } }));
@@ -122,9 +122,9 @@ describe("Scanner", () => {
     expect(result.framework).toBe("Phoenix");
   });
 
-  it("respects runtime and package manager overrides from .p-setup.json", async () => {
+  it("respects runtime and package manager overrides from .setupr.json", async () => {
     await writeFile(
-      join(tempDir, ".p-setup.json"),
+      join(tempDir, ".setupr.json"),
       JSON.stringify({ runtime: "python", packageManager: "pip" })
     );
     await writeFile(
@@ -137,13 +137,13 @@ describe("Scanner", () => {
     expect(result.runtime?.name).toBe("python");
   });
 
-  it("respects package.json p-setup runtime and package manager overrides", async () => {
+  it("respects package.json setupr runtime and package manager overrides", async () => {
     await writeFile(
       join(tempDir, "package.json"),
       JSON.stringify({
         packageManager: "pnpm@9.0.0",
         dependencies: { react: "18" },
-        "p-setup": {
+        "setupr": {
           language: "Python",
           framework: "FastAPI",
           runtime: { name: "python", version: ">=3.11" },

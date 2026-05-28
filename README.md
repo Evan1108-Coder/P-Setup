@@ -1,17 +1,17 @@
-# P-Setup
+# Setupr
 
 Intelligent project setup & management CLI. Auto-detects your stack, installs dependencies, configures environments, and keeps projects healthy. Supports 20+ languages with AI-assisted workflows. Features rich TUI with keyboard navigation, real-time status, and smart caching for near-zero AI costs.
 
 ## Installation
 
 ```bash
-npx p-setup
+npx setupr
 ```
 
 Or install globally:
 
 ```bash
-npm install -g p-setup
+npm install -g setupr
 ```
 
 ## Quick Start
@@ -20,7 +20,7 @@ npm install -g p-setup
 # Full project setup (scan, install, configure, verify)
 setup
 
-# Configure P-Setup AI once, globally
+# Configure Setupr AI once, globally
 setup auth login
 
 # With minimal prompts (CI-friendly, still stops for blockers/destructive risk)
@@ -41,7 +41,7 @@ setup --plain
 | `doctor` | Diagnose environment health (runtimes, deps, ports) |
 | `update` | Check for dependency updates with breaking change warnings |
 | `clean` | Remove artifacts (`--deps`, `--share`, `--all`; positional `deps`, `share`, `all` also work) |
-| `auth` | Manage global P-Setup AI provider API keys and models |
+| `auth` | Manage global Setupr AI provider API keys and models |
 
 ### Non-TUI Commands (Plain Terminal)
 
@@ -56,7 +56,7 @@ setup --plain
 | `remove <package>` | Remove dependency |
 | `port [number]` | Check/find/kill port |
 | `deps` | Dependency tree, outdated, audit |
-| `config` | Manage p-setup config |
+| `config` | Manage setupr config |
 | `help [command]` | Show global or command-specific help |
 | `lock` | Snapshot environment state |
 | `diff` | Compare current vs locked state |
@@ -70,7 +70,7 @@ setup --plain
 
 ### Smart Detection
 
-P-Setup automatically detects:
+Setupr automatically detects:
 - **Languages**: TypeScript, JavaScript, Python, Rust, Go, Java, Ruby, PHP, Dart, Elixir, Swift, C#, Kotlin, Scala, and more
 - **Frameworks**: Next.js, Nuxt, SvelteKit, React, Vue, Angular, Express, Django, Flask, Rails, Spring Boot, and 20+ more
 - **Package Managers**: npm, yarn, pnpm, bun, pip, poetry, cargo, go, bundler, composer, pub, mix
@@ -79,15 +79,15 @@ P-Setup automatically detects:
 
 ### Detection Priority
 
-1. `.p-setup.json` config file (explicit, highest priority)
-2. `package.json` "p-setup" field
+1. `.setupr.json` config file (explicit, highest priority)
+2. `package.json` "setupr" field
 3. File-based scanning (lock files, config files)
 4. Content analysis (dependency inspection)
 5. AI fallback (novel situations only)
 
 ### AI-Powered Intelligence
 
-P-Setup uses a 3-tier progressive intelligence system:
+Setupr uses a 3-tier progressive intelligence system:
 
 1. **Pattern Matching** (Level 0) — Free, instant. Handles ~80% of queries
 2. **Cached Responses** (Level 1) — Free after first hit. Smart deduplication
@@ -127,29 +127,29 @@ setup auth models
 setup auth use openai/gpt-4.1-mini
 ```
 
-P-Setup stores provider API keys globally in `~/.p-setup/secrets.json` with file permissions `0600`. Raw keys are never printed; `setup auth list` and `setup auth status` show only masked keys.
+Setupr stores provider API keys globally in `~/.setupr/secrets.json` with file permissions `0600`. Raw keys are never printed; `setup auth list` and `setup auth status` show only masked keys.
 
-P-Setup resolves provider keys in this order:
+Setupr resolves provider keys in this order:
 
 1. Shell environment variables, useful for CI or temporary overrides
-2. Global P-Setup auth storage from `setup auth set-key`
+2. Global Setupr auth storage from `setup auth set-key`
 3. Project `.env.local` / `.env` for backward compatibility only
 
-The project `.env` file is for the app being set up, not for P-Setup's own API keys. To migrate old project-local provider keys into global auth:
+The project `.env` file is for the app being set up, not for Setupr's own API keys. To migrate old project-local provider keys into global auth:
 
 ```bash
 setup auth migrate
 ```
 
-When multiple provider keys are present, `P_SETUP_AI_MODEL` or `setup auth use <model>` wins. If no model is pinned, P-Setup chooses the cheapest configured model from its known local pricing table and shows that choice in the pre-execution warning. GitHub Models catalog/custom pricing is treated as unknown, so GitHub is used automatically only when it is explicitly selected or it is the only configured provider.
+When multiple provider keys are present, `P_SETUP_AI_MODEL` or `setup auth use <model>` wins. If no model is pinned, Setupr chooses the cheapest configured model from its known local pricing table and shows that choice in the pre-execution warning. GitHub Models catalog/custom pricing is treated as unknown, so GitHub is used automatically only when it is explicitly selected or it is the only configured provider.
 
-P-Setup still accepts `export KEY=value` syntax in project env files for project variables and backward-compatible provider overrides.
+Setupr still accepts `export KEY=value` syntax in project env files for project variables and backward-compatible provider overrides.
 
 ### Agent-Guided TUI Flow
 
 The `setup` TUI is an agent workspace, not just a log viewer:
 
-- Before the dashboard opens, P-Setup prints a plain-text warning describing what it may do.
+- Before the dashboard opens, Setupr prints a plain-text warning describing what it may do.
 - Inside the TUI, the main panel shows a time-ordered timeline: system events, AI decisions, user messages, command output, warnings, and confirmations.
 - When the agent needs input, it pauses with an option card above the persistent chat input. You can pick an option, paste `KEY=value` environment blobs into `Other...`, or type a plan override such as `skip build` or `prefer pnpm`.
 - The AI director can also act on natural language while setup is open: change models, answer the current prompt, fill env values from pasted text, skip or rewrite plan steps, summarize status, and continue with the updated plan.
@@ -165,12 +165,12 @@ Every command uses the same error format in plain mode and TUI mode:
 - a stable error code such as `ENV_TEMPLATE_MISSING`, `AUTH_STORAGE_INVALID`, `MISSING_SCRIPT`, or `AI_PROVIDER_QUOTA_EXHAUSTED`
 - a direct explanation of what happened in the current directory/provider/model
 - details that are safe to show, with API keys and tokens masked
-- next steps and recovery options when P-Setup can continue
+- next steps and recovery options when Setupr can continue
 
 Examples:
 
-- `setup env init` stops if `.env.example` is missing, because P-Setup cannot infer required variables. `setup env init --force` creates an empty `.env` and explains that no variables were inferred.
-- `setup auth list` stops on a corrupt `~/.p-setup/secrets.json` instead of pretending keys are missing, so existing secrets are not accidentally overwritten.
+- `setup env init` stops if `.env.example` is missing, because Setupr cannot infer required variables. `setup env init --force` creates an empty `.env` and explains that no variables were inferred.
+- `setup auth list` stops on a corrupt `~/.setupr/secrets.json` instead of pretending keys are missing, so existing secrets are not accidentally overwritten.
 - command failures are classified as install, build, test, network, permission, timeout, or missing-tool errors when possible.
 - `--force` skips ordinary prompts, but it does not ignore failed commands, invalid auth storage, missing secrets, or destructive blockers.
 
@@ -196,7 +196,7 @@ setup env smart
 
 ### Checkpoint & Resume
 
-- Progress saved to `.p-setup/checkpoint.json`
+- Progress saved to `.setupr/checkpoint.json`
 - Setup stops on the first failed step and returns a non-zero exit code in plain mode
 - Persists across terminals and reboots
 - Automatically cleaned up on success
@@ -214,7 +214,7 @@ setup env smart
 
 ## Configuration
 
-Global config stored at `~/.p-setup/config.json`:
+Global config stored at `~/.setupr/config.json`:
 
 ```json
 {
@@ -226,7 +226,7 @@ Global config stored at `~/.p-setup/config.json`:
 }
 ```
 
-Provider API keys are stored separately at `~/.p-setup/secrets.json` and should be managed with `setup auth`.
+Provider API keys are stored separately at `~/.setupr/secrets.json` and should be managed with `setup auth`.
 
 ### Help
 
@@ -239,7 +239,7 @@ setup help auth set-key
 
 Global help lists every command. Command help shows subcommands, variations, options, and examples for that command.
 
-Project-level config via `.p-setup.json`:
+Project-level config via `.setupr.json`:
 
 ```json
 {

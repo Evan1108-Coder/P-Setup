@@ -1,5 +1,5 @@
-export type PSetupErrorSeverity = "info" | "warning" | "error" | "fatal";
-export type PSetupErrorCategory =
+export type SetuprErrorSeverity = "info" | "warning" | "error" | "fatal";
+export type SetuprErrorCategory =
   | "usage"
   | "project"
   | "env"
@@ -43,10 +43,10 @@ export interface RecoveryAction {
   risky?: boolean;
 }
 
-export interface PSetupErrorInput {
+export interface SetuprErrorInput {
   code: string;
-  category: PSetupErrorCategory;
-  severity: PSetupErrorSeverity;
+  category: SetuprErrorCategory;
+  severity: SetuprErrorSeverity;
   title: string;
   command?: string;
   subcommand?: string;
@@ -62,12 +62,12 @@ export interface PSetupErrorInput {
   metadata?: Record<string, unknown>;
 }
 
-export interface PSetupError extends PSetupErrorInput {
-  code: PSetupErrorCode;
+export interface SetuprError extends SetuprErrorInput {
+  code: SetuprErrorCode;
   timestamp: number;
 }
 
-export type PSetupErrorCode =
+export type SetuprErrorCode =
   | "UNKNOWN_COMMAND"
   | "UNKNOWN_SUBCOMMAND"
   | "INVALID_FLAG"

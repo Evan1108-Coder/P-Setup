@@ -41,5 +41,5 @@ export function buildCacheKey(query: string, contextDSL: string): string {
 }
 
 function cacheDir(): string {
-  return join(process.env.HOME || "~", ".p-setup", "cache");
+  return join(process.env.HOME || "~", ".setupr", "cache");
 }

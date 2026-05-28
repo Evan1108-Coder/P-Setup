@@ -1,10 +1,10 @@
-# Contributing to P-Setup
+# Contributing to Setupr
 
 ## Development
 
 ```bash
-git clone https://github.com/Evan1108-Coder/P-Setup.git
-cd P-Setup
+git clone https://github.com/Evan1108-Coder/Setupr.git
+cd Setupr
 npm install
 npm run dev  # Watch mode
 ```

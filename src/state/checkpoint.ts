@@ -3,7 +3,7 @@ import { join } from "path";
 import type { SetupStep } from "../ai/planner.js";
 import type { ScanResult } from "../scanner/index.js";
 
-const CHECKPOINT_DIR = ".p-setup";
+const CHECKPOINT_DIR = ".setupr";
 const CHECKPOINT_FILE = "checkpoint.json";
 
 export interface Checkpoint {

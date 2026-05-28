@@ -3,7 +3,7 @@ import { chmod, mkdir, readFile, writeFile } from "fs/promises";
 import { homedir } from "os";
 import { join } from "path";
 import type { AIProvider } from "../ai/models.js";
-import { createPSetupError } from "../errors/index.js";
+import { createSetuprError } from "../errors/index.js";
 
 export interface StoredProviderSecret {
   apiKey: string;
@@ -38,7 +38,7 @@ export const AUTH_PROVIDERS: AIProvider[] = [
 ];
 
 export function authDir(): string {
-  return join(process.env.HOME || homedir() || process.cwd(), ".p-setup");
+  return join(process.env.HOME || homedir() || process.cwd(), ".setupr");
 }
 
 export function secretsPath(): string {
@@ -146,7 +146,7 @@ async function saveAuthSecrets(secrets: AuthSecretsFile): Promise<void> {
     }, null, 2));
     await chmod(secretsPath(), SECRET_FILE_MODE);
   } catch (err) {
-    throw createPSetupError({
+    throw createSetuprError({
       code: "AUTH_STORAGE_FAILED",
       details: [err instanceof Error ? err.message : String(err)],
     });
@@ -181,7 +181,7 @@ function authStorageError(err: unknown) {
   const code = /json|parse|unexpected|position/i.test(message)
     ? "AUTH_STORAGE_INVALID"
     : "AUTH_STORAGE_FAILED";
-  return createPSetupError({
+  return createSetuprError({
     code,
     details: [`Path: ${secretsPath()}`, message],
   });

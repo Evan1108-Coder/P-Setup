@@ -9,7 +9,7 @@ describe("Environment helpers", () => {
   let tempDir: string;
 
   beforeEach(async () => {
-    tempDir = await mkdtemp(join(tmpdir(), "p-setup-env-test-"));
+    tempDir = await mkdtemp(join(tmpdir(), "setupr-env-test-"));
   });
 
   afterEach(async () => {

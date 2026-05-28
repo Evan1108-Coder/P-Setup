@@ -192,7 +192,7 @@ export function createAppStore(cwd: string) {
     services: [],
     notices: [],
     checkpointSaved: false,
-    checkpointPath: ".p-setup/state.json",
+    checkpointPath: ".setupr/state.json",
     totalPackages: 0,
     installedPackages: 0,
     deprecatedCount: 0,

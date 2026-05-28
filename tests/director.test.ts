@@ -25,7 +25,7 @@ describe("AI director", () => {
   let tempDir: string;
 
   beforeEach(async () => {
-    tempDir = await mkdtemp(join(tmpdir(), "p-setup-director-"));
+    tempDir = await mkdtemp(join(tmpdir(), "setupr-director-"));
     chdir(tempDir);
     env.HOME = join(tempDir, "home");
     await mkdir(env.HOME, { recursive: true });

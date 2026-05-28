@@ -1,7 +1,7 @@
 import { mkdir, writeFile, readFile, readdir, rm } from "fs/promises";
 import { join } from "path";
 
-const SNAPSHOT_DIR = ".p-setup/snapshots";
+const SNAPSHOT_DIR = ".setupr/snapshots";
 
 interface Snapshot {
   id: string;

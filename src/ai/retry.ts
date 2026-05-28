@@ -1,12 +1,12 @@
 import { loadConfig } from "../state/config.js";
 import { classifyAIProviderError } from "../errors/index.js";
-import type { PSetupError } from "../errors/types.js";
+import type { SetuprError } from "../errors/types.js";
 
 export interface RetryOptions {
   maxRetries?: number;
   baseDelayMs?: number;
   timeoutMs?: number;
-  onRetry?: (attempt: number, error: PSetupError, delayMs: number) => void;
+  onRetry?: (attempt: number, error: SetuprError, delayMs: number) => void;
 }
 
 export async function withRetry<T>(
@@ -48,7 +48,7 @@ export async function withRetry<T>(
   throw lastError;
 }
 
-function isRetryable(error: PSetupError): boolean {
+function isRetryable(error: SetuprError): boolean {
   const retryableCodes = new Set([
     "AI_PROVIDER_TIMEOUT",
     "AI_PROVIDER_RATE_LIMITED",

@@ -1,8 +1,8 @@
 # Environment Variables
 
-## P-Setup AI Provider Keys
+## Setupr AI Provider Keys
 
-P-Setup provider API keys should be stored globally with `setup auth`, not in a project `.env` file:
+Setupr provider API keys should be stored globally with `setup auth`, not in a project `.env` file:
 
 ```bash
 setup auth login
@@ -12,7 +12,7 @@ setup auth test
 setup auth use openai/gpt-4.1-mini
 ```
 
-Keys are stored at `~/.p-setup/secrets.json` with file permissions `0600`, and P-Setup only displays masked values.
+Keys are stored at `~/.setupr/secrets.json` with file permissions `0600`, and Setupr only displays masked values.
 
 Supported provider environment variable names are still accepted for CI, temporary overrides, and backward compatibility:
 
@@ -30,7 +30,7 @@ Supported provider environment variable names are still accepted for CI, tempora
 
 For GitHub Models, use a token that can read GitHub Models. Fine-grained PATs or app tokens need the `models: read` permission.
 
-P-Setup resolves provider keys in this order:
+Setupr resolves provider keys in this order:
 
 1. Shell environment variables
 2. Global auth storage from `setup auth set-key`
@@ -46,7 +46,7 @@ setup auth migrate
 
 Project `.env`, `.env.local`, and `.env.example` should primarily describe the app being set up, such as `DATABASE_URL`, `PORT`, or `NEXT_PUBLIC_API_URL`.
 
-## P-Setup Configuration
+## Setupr Configuration
 
 | Variable | Description | Default |
 |----------|-------------|---------|
@@ -56,15 +56,15 @@ Project `.env`, `.env.local`, and `.env.example` should primarily describe the a
 If several provider keys are set, the selected model is deterministic:
 
 1. `P_SETUP_AI_MODEL` or `setup auth use ...` wins.
-2. Otherwise P-Setup picks the cheapest configured model from its known local pricing table.
+2. Otherwise Setupr picks the cheapest configured model from its known local pricing table.
 3. GitHub Models catalog pricing is treated as unknown, so GitHub is picked automatically only if explicitly selected or if it is the only configured provider.
 4. The setup pre-warning and TUI timeline show which model the AI director is using.
 
-## How P-Setup Handles Your .env
+## How Setupr Handles Your .env
 
 ### Detection
 
-P-Setup detects required environment variables by:
+Setupr detects required environment variables by:
 1. Reading `.env.example` as the template
 2. Comparing against your `.env` file
 3. Validating values (URLs, ports, key lengths, placeholders)
@@ -118,6 +118,6 @@ setup env smart
 
 ### Security
 
-- P-Setup provider API keys should live in global auth storage, not project `.env`
-- P-Setup masks sensitive env values before AI context is built
+- Setupr provider API keys should live in global auth storage, not project `.env`
+- Setupr masks sensitive env values before AI context is built
 - `.env` files are in `.gitignore` by default

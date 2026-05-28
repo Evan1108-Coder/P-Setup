@@ -48,7 +48,7 @@ describe("AI model configuration", () => {
   let tempDir: string;
 
   beforeEach(async () => {
-    tempDir = await mkdtemp(join(tmpdir(), "p-setup-ai-models-"));
+    tempDir = await mkdtemp(join(tmpdir(), "setupr-ai-models-"));
     chdir(tempDir);
     for (const key of Object.keys(env)) {
       if (key.endsWith("_API_KEY") || key === "GITHUB_TOKEN" || key === "P_SETUP_AI_MODEL" || key === "HOME") {
@@ -83,9 +83,9 @@ describe("AI model configuration", () => {
 
   it("uses the saved config model when no env model override is set", async () => {
     const home = env.HOME!;
-    await mkdir(join(home, ".p-setup"), { recursive: true });
+    await mkdir(join(home, ".setupr"), { recursive: true });
     await writeFile(
-      join(home, ".p-setup", "config.json"),
+      join(home, ".setupr", "config.json"),
       JSON.stringify({ ai: { enabled: true, model: "kimi-k2-turbo-preview" } })
     );
     env.MOONSHOT_API_KEY = "moonshot-test";

@@ -337,7 +337,7 @@ function Header({
   return (
     <Box width="100%" height={1}>
       <Box width={leftWidth} minWidth={0} flexShrink={1}>
-        <Text color={colors.accent} bold>◆ p-setup</Text>
+        <Text color={colors.accent} bold>◆ setupr</Text>
         <Text color={colors.textDim}>  </Text>
         <Text color={colors.text} wrap="truncate">{truncPath(cwd)}</Text>
         {showStack && (

@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   classifyAIProviderError,
   classifyCommandFailure,
-  createPSetupError,
+  createSetuprError,
   renderPlainError,
   sanitizeSecret,
   fromUnknownError,
@@ -10,12 +10,12 @@ import {
 
 describe("centralized error system", () => {
   it("renders clear contextual plain errors with recovery information", () => {
-    const error = createPSetupError({
+    const error = createSetuprError({
       code: "ENV_TEMPLATE_MISSING",
       command: "env",
       subcommand: "init",
       cwd: "/tmp/project",
-      forceBehavior: "With --force, P-Setup creates an empty .env and explains why.",
+      forceBehavior: "With --force, Setupr creates an empty .env and explains why.",
       recovery: [{ kind: "run-command", label: "Create an empty env file", command: "setup env init --force" }],
     });
 
@@ -61,7 +61,7 @@ describe("centralized error system", () => {
   });
 
   it("does not wrap already structured errors as unknown failures", () => {
-    const original = createPSetupError({
+    const original = createSetuprError({
       code: "MALFORMED_PROJECT_FILE",
       cwd: "/tmp/bad",
       details: ["File: package.json"],

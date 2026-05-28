@@ -5,7 +5,7 @@ import { launchTUI } from "./launcher.js";
 import { runPlainMode } from "./plain.js";
 import { withInteractiveScreen } from "./terminalScreen.js";
 import { helpPathFromInput, isHelpRequest, showHelp } from "./help.js";
-import { createPSetupError, printPlainError } from "../errors/index.js";
+import { createSetuprError, printPlainError } from "../errors/index.js";
 
 const cli = meow(
   `
@@ -29,7 +29,7 @@ const cli = meow(
     remove      Remove dependency
     port        Check/find/kill port
     deps        Dependency tree, outdated, audit
-    config      Manage p-setup config (show, set, reset, models)
+    config      Manage setupr config (show, set, reset, models)
     lock        Snapshot environment state
     diff        Compare current vs locked state
     logs        Tail project logs
@@ -116,7 +116,7 @@ export async function run() {
 
       // Launch TUI
       await launchTUI(command as any, cwd, { cleanMode: subCommand as any, force: cli.flags.force });
-    }, { title: `P-Setup ${command}` });
+    }, { title: `Setupr ${command}` });
   } else if ((tuiCommands.includes(command) || isBareAuth) && isPlain) {
     if (isBareAuth) {
       const { runNonTUICommand } = await import("../commands/plain/router.js");
@@ -146,13 +146,13 @@ function validateCliRequest(command: string, subCommand: string | undefined, cwd
     "lint", "format", "scaffold",
   ]);
   if (!known.has(command)) {
-    printPlainError(createPSetupError({ code: "UNKNOWN_COMMAND", command, cwd, details: [`Received: ${command}`] }));
+    printPlainError(createSetuprError({ code: "UNKNOWN_COMMAND", command, cwd, details: [`Received: ${command}`] }));
     return false;
   }
 
   const cleanFlags = [cli.flags.all, cli.flags.deps, cli.flags.share].filter(Boolean).length;
   if (cleanFlags > 1) {
-    printPlainError(createPSetupError({
+    printPlainError(createSetuprError({
       code: "INVALID_FLAG_COMBINATION",
       command,
       cwd,
@@ -161,7 +161,7 @@ function validateCliRequest(command: string, subCommand: string | undefined, cwd
     return false;
   }
   if (command !== "clean" && cleanFlags > 0) {
-    printPlainError(createPSetupError({
+    printPlainError(createSetuprError({
       code: "INVALID_FLAG",
       command,
       cwd,
@@ -170,7 +170,7 @@ function validateCliRequest(command: string, subCommand: string | undefined, cwd
     return false;
   }
   if (cli.flags.key && !(command === "auth" && subCommand === "set-key")) {
-    printPlainError(createPSetupError({
+    printPlainError(createSetuprError({
       code: "INVALID_FLAG",
       command,
       subcommand: subCommand,
@@ -182,7 +182,7 @@ function validateCliRequest(command: string, subCommand: string | undefined, cwd
 
   const noSubcommand = new Set(["setup", "start", "doctor", "update", "info", "list", "deps", "lock", "diff", "logs", "test", "build", "deploy"]);
   if (subCommand && noSubcommand.has(command)) {
-    printPlainError(createPSetupError({
+    printPlainError(createSetuprError({
       code: "UNKNOWN_SUBCOMMAND",
       command,
       subcommand: subCommand,
@@ -192,7 +192,7 @@ function validateCliRequest(command: string, subCommand: string | undefined, cwd
     return false;
   }
   if (command === "clean" && subCommand && !["deps", "share", "all"].includes(subCommand)) {
-    printPlainError(createPSetupError({
+    printPlainError(createSetuprError({
       code: "CLEAN_MODE_INVALID",
       command: "clean",
       subcommand: subCommand,

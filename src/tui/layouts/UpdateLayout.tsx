@@ -11,7 +11,7 @@ import { hasProjectSignals } from "../projectSignals.js";
 import { runCommand } from "../../executor/index.js";
 import { intelligentResponse } from "../../ai/intelligence.js";
 import { scanResultToDSL } from "../../ai/dsl.js";
-import { classifyCommandFailure, createPSetupError, fromUnknownError, type PSetupError } from "../../errors/index.js";
+import { classifyCommandFailure, createSetuprError, fromUnknownError, type SetuprError } from "../../errors/index.js";
 import type { ScanResult } from "../../scanner/index.js";
 
 interface OutdatedPkg {
@@ -24,7 +24,7 @@ interface OutdatedPkg {
 interface UpdateResult {
   packages: OutdatedPkg[];
   notice?: string;
-  error?: PSetupError;
+  error?: SetuprError;
 }
 
 interface UpdateLayoutProps {
@@ -49,7 +49,7 @@ export function UpdateLayout({ scan, cwd }: UpdateLayoutProps) {
   const [packages, setPackages] = useState<OutdatedPkg[]>([]);
   const [loading, setLoading] = useState(true);
   const [notice, setNotice] = useState<string | null>(null);
-  const [error, setError] = useState<PSetupError | null>(null);
+  const [error, setError] = useState<SetuprError | null>(null);
   const [chatMessages, setChatMessages] = useState<string[]>([]);
   const noProject = !hasProjectSignals(scan);
 
@@ -81,7 +81,7 @@ export function UpdateLayout({ scan, cwd }: UpdateLayoutProps) {
   return (
     <Box flexDirection="column" width={terminal.width} height={terminal.height}>
       <Box height={1} justifyContent="space-between">
-        <Text color={colors.primary} bold> P-Setup Update</Text>
+        <Text color={colors.primary} bold> Setupr Update</Text>
         <Text color={noProject ? colors.warning : colors.textDim}>
           {noProject ? "no project" : loading ? "scanning..." : `${packages.length} outdated`}
         </Text>
@@ -187,13 +187,13 @@ async function checkOutdated(scan: ScanResult, cwd: string, noProject: boolean):
   if (noProject) {
     return {
       packages: [],
-      error: createPSetupError({ code: "NO_PROJECT_DETECTED", command: "update", cwd, canContinue: false }),
+      error: createSetuprError({ code: "NO_PROJECT_DETECTED", command: "update", cwd, canContinue: false }),
     };
   }
   if (!scan.packageManager) {
     return {
       packages: [],
-      error: createPSetupError({ code: "MISSING_PACKAGE_MANAGER", command: "update", cwd, details: ["No npm, yarn, pnpm, bun, pip, cargo, or go package manager was detected."] }),
+      error: createSetuprError({ code: "MISSING_PACKAGE_MANAGER", command: "update", cwd, details: ["No npm, yarn, pnpm, bun, pip, cargo, or go package manager was detected."] }),
     };
   }
   const pm = scan.packageManager;
@@ -209,7 +209,7 @@ async function checkOutdated(scan: ScanResult, cwd: string, noProject: boolean):
     if (timedOut) {
       return {
         packages: [],
-        error: createPSetupError({ code: "COMMAND_TIMEOUT", command: "update", cwd, details: [`Command: ${pm} outdated --json`] }),
+        error: createSetuprError({ code: "COMMAND_TIMEOUT", command: "update", cwd, details: [`Command: ${pm} outdated --json`] }),
       };
     }
     const raw = result.stdout || result.stderr || "{}";

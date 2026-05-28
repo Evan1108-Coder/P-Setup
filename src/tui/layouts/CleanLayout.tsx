@@ -9,14 +9,14 @@ import { colors, icons } from "../theme.js";
 import type { ScanResult } from "../../scanner/index.js";
 import { stat, rm } from "fs/promises";
 import { join } from "path";
-import { createPSetupError, type PSetupError } from "../../errors/index.js";
+import { createSetuprError, type SetuprError } from "../../errors/index.js";
 
 interface CleanTarget {
   path: string;
   size: string;
   type: "deps" | "build" | "cache" | "sensitive";
   status: "pending" | "removing" | "done" | "failed";
-  error?: PSetupError;
+  error?: SetuprError;
 }
 
 interface CleanLayoutProps {
@@ -62,7 +62,7 @@ export function CleanLayout({ cwd, mode }: CleanLayoutProps) {
   return (
     <Box flexDirection="column" width={terminal.width} height={terminal.height}>
       <Box height={1} justifyContent="space-between">
-        <Text color={colors.primary} bold> P-Setup Clean</Text>
+        <Text color={colors.primary} bold> Setupr Clean</Text>
         <Text color={colors.textDim}>mode: {mode}</Text>
       </Box>
 
@@ -168,7 +168,7 @@ async function cleanTargets(cwd: string, targets: CleanTarget[]): Promise<CleanT
       results[i] = {
         ...results[i],
         status: "failed",
-        error: createPSetupError({
+        error: createSetuprError({
           code: "CLEAN_TARGET_FAILED",
           command: "clean",
           cwd,

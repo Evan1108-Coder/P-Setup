@@ -263,7 +263,7 @@ function readSavedModelId(): string | undefined {
   if (!home) return undefined;
 
   try {
-    const raw = readFileSync(join(home, ".p-setup", "config.json"), "utf-8");
+    const raw = readFileSync(join(home, ".setupr", "config.json"), "utf-8");
     const config = JSON.parse(raw) as { ai?: { model?: string } };
     return config.ai?.model;
   } catch {

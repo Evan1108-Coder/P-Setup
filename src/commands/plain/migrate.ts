@@ -3,7 +3,7 @@ import { existsSync } from "fs";
 import { readFile, writeFile, rm, unlink } from "fs/promises";
 import { join } from "path";
 import { runCommand } from "../../executor/index.js";
-import { createPSetupError, printPlainError } from "../../errors/index.js";
+import { createSetuprError, printPlainError } from "../../errors/index.js";
 import { scanProject } from "../../scanner/index.js";
 
 interface MigrateFlags {
@@ -30,7 +30,7 @@ const INSTALL_CMD: Record<PackageManager, string> = {
 
 export async function cmdMigrate(sub: string | undefined, cwd: string, flags: MigrateFlags): Promise<void> {
   if (!sub) {
-    printPlainError(createPSetupError({
+    printPlainError(createSetuprError({
       code: "MIGRATE_UNSUPPORTED",
       command: "migrate",
       cwd,
@@ -41,7 +41,7 @@ export async function cmdMigrate(sub: string | undefined, cwd: string, flags: Mi
 
   const target = sub as PackageManager;
   if (!LOCKFILES[target]) {
-    printPlainError(createPSetupError({
+    printPlainError(createSetuprError({
       code: "MIGRATE_UNSUPPORTED",
       command: "migrate",
       cwd,
@@ -54,7 +54,7 @@ export async function cmdMigrate(sub: string | undefined, cwd: string, flags: Mi
   const current = scan.packageManager as PackageManager | null;
 
   if (!current) {
-    printPlainError(createPSetupError({
+    printPlainError(createSetuprError({
       code: "MISSING_PACKAGE_JSON",
       command: "migrate",
       cwd,
@@ -70,7 +70,7 @@ export async function cmdMigrate(sub: string | undefined, cwd: string, flags: Mi
 
   const verifyResult = await runCommand(`${target} --version`, cwd);
   if (verifyResult.exitCode !== 0) {
-    printPlainError(createPSetupError({
+    printPlainError(createSetuprError({
       code: "MISSING_PACKAGE_MANAGER",
       command: "migrate",
       cwd,
@@ -89,7 +89,7 @@ export async function cmdMigrate(sub: string | undefined, cwd: string, flags: Mi
         .filter(([, file]) => existsSync(join(cwd, file)));
 
       if (otherLocks.length > 0) {
-        printPlainError(createPSetupError({
+        printPlainError(createSetuprError({
           code: "MIGRATE_LOCKFILE_CONFLICT",
           command: "migrate",
           cwd,
@@ -123,7 +123,7 @@ export async function cmdMigrate(sub: string | undefined, cwd: string, flags: Mi
   console.log(chalk.blue(`  Installing with ${target}...`));
   const installResult = await runCommand(INSTALL_CMD[target], cwd);
   if (installResult.exitCode !== 0) {
-    printPlainError(createPSetupError({
+    printPlainError(createSetuprError({
       code: "MIGRATE_FAILED",
       command: "migrate",
       cwd,

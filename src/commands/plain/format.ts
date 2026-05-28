@@ -2,7 +2,7 @@ import chalk from "chalk";
 import { writeFile } from "fs/promises";
 import { existsSync } from "fs";
 import { join } from "path";
-import { createPSetupError, printPlainError } from "../../errors/index.js";
+import { createSetuprError, printPlainError } from "../../errors/index.js";
 import { scanProject } from "../../scanner/index.js";
 import { runCommand } from "../../executor/index.js";
 
@@ -20,7 +20,7 @@ export async function cmdFormat(sub: string | undefined, cwd: string, flags: For
     case "check": return formatCheck(cwd, flags);
     case "setup": return formatSetup(cwd, flags);
     default:
-      printPlainError(createPSetupError({
+      printPlainError(createSetuprError({
         code: "UNKNOWN_SUBCOMMAND",
         command: "format",
         subcommand: sub,
@@ -75,7 +75,7 @@ async function formatCheck(cwd: string, flags: FormatFlags): Promise<void> {
   if (scan.scripts["format:check"]) {
     const result = await runCommand(`${pm} run format:check`, cwd);
     if (result.exitCode === 0) console.log(chalk.green("✓ All files formatted correctly"));
-    else { console.log(result.stdout); printPlainError(createPSetupError({ code: "COMMAND_FAILED", command: "format", subcommand: "check", cwd, details: ["Some files need formatting."] })); }
+    else { console.log(result.stdout); printPlainError(createSetuprError({ code: "COMMAND_FAILED", command: "format", subcommand: "check", cwd, details: ["Some files need formatting."] })); }
     return;
   }
 

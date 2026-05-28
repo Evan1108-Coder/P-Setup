@@ -1,5 +1,5 @@
 import chalk from "chalk";
-import { createPSetupError, printPlainError } from "../errors/index.js";
+import { createSetuprError, printPlainError } from "../errors/index.js";
 
 interface HelpNode {
   name: string;
@@ -21,8 +21,8 @@ const GLOBAL_HELP: HelpNode = {
     { name: "update", summary: "Check dependency updates and warn about risky changes." },
     { name: "clean", summary: "Remove generated artifacts; supports deps, share, and all modes." },
     { name: "env", summary: "Manage project .env files from .env.example." },
-    { name: "auth", summary: "Manage P-Setup AI provider API keys and models." },
-    { name: "config", summary: "Manage global P-Setup preferences." },
+    { name: "auth", summary: "Manage Setupr AI provider API keys and models." },
+    { name: "config", summary: "Manage global Setupr preferences." },
     { name: "info", summary: "Show project summary." },
     { name: "list", summary: "List available project scripts." },
     { name: "run", summary: "Run a project script." },
@@ -62,7 +62,7 @@ const HELP_NODES: Record<string, HelpNode> = {
   },
   auth: {
     name: "auth",
-    summary: "Manage global P-Setup AI provider API keys and active model.",
+    summary: "Manage global Setupr AI provider API keys and active model.",
     usage: "setup auth <command> [options]",
     commands: [
       { name: "login", summary: "Guided provider API key setup." },
@@ -75,7 +75,7 @@ const HELP_NODES: Record<string, HelpNode> = {
       { name: "models", summary: "Show supported models and availability." },
       { name: "use", summary: "Set the active model globally." },
       { name: "doctor", summary: "Run deeper auth diagnostics." },
-      { name: "migrate", summary: "Move P-Setup provider keys from project .env into global auth." },
+      { name: "migrate", summary: "Move Setupr provider keys from project .env into global auth." },
       { name: "reset", summary: "Remove all saved provider API keys after confirmation." },
     ],
     options: [
@@ -93,7 +93,7 @@ const HELP_NODES: Record<string, HelpNode> = {
   },
   "auth set-key": {
     name: "auth set-key",
-    summary: "Save one provider API key in global P-Setup auth storage.",
+    summary: "Save one provider API key in global Setupr auth storage.",
     usage: "setup auth set-key <provider> [--key <api-key>] [--force]",
     options: [
       { name: "--key <api-key>", summary: "Use inline value; may be visible in shell history." },
@@ -136,7 +136,7 @@ const HELP_NODES: Record<string, HelpNode> = {
   },
   config: {
     name: "config",
-    summary: "Manage global P-Setup preferences.",
+    summary: "Manage global Setupr preferences.",
     usage: "setup config <show|set|reset|models>",
     commands: [
       { name: "show", summary: "Show current config." },
@@ -153,7 +153,7 @@ export function showHelp(path: string[] = []): boolean {
   const key = normalized.join(" ");
   const node = key ? HELP_NODES[key] || HELP_NODES[normalized[0]] : GLOBAL_HELP;
   if (!node) {
-    printPlainError(createPSetupError({
+    printPlainError(createSetuprError({
       code: "UNKNOWN_SUBCOMMAND",
       command: "help",
       subcommand: path.join(" "),

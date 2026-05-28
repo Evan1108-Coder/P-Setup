@@ -11,15 +11,15 @@
 ### Via npx (recommended)
 
 ```bash
-npx p-setup
+npx setupr
 ```
 
-This runs P-Setup without installing it globally.
+This runs Setupr without installing it globally.
 
 ### Global Installation
 
 ```bash
-npm install -g p-setup
+npm install -g setupr
 ```
 
 After installation, the `setup` command is available globally:
@@ -33,8 +33,8 @@ setup info
 ### Development Setup
 
 ```bash
-git clone https://github.com/Evan1108-Coder/P-Setup.git
-cd P-Setup
+git clone https://github.com/Evan1108-Coder/Setupr.git
+cd Setupr
 npm install
 npm run build
 node dist/setup.js --help
@@ -43,8 +43,8 @@ node dist/setup.js --help
 ## First Run
 
 1. Navigate to any project directory
-2. Run `setup` (or `npx p-setup`)
-3. P-Setup will:
+2. Run `setup` (or `npx setupr`)
+3. Setupr will:
    - Display a pre-execution warning
    - Ask you to confirm (press Enter)
    - Launch the TUI
@@ -59,14 +59,14 @@ You can steer the agent from the persistent input at the bottom of the TUI. For 
 
 ## AI Features (Optional)
 
-To enable AI-powered features, save at least one provider key in global P-Setup auth storage:
+To enable AI-powered features, save at least one provider key in global Setupr auth storage:
 
 ```bash
 setup auth login
 # Or: setup auth set-key github
 ```
 
-Project `.env` files are for the app being set up, not P-Setup's own API keys. For model preference:
+Project `.env` files are for the app being set up, not Setupr's own API keys. For model preference:
 
 ```bash
 setup auth use kimi-k2-turbo-preview
@@ -79,7 +79,7 @@ Supported model IDs are listed with:
 setup auth models
 ```
 
-Without an API key, P-Setup works fully — it just uses pattern matching and heuristics instead of AI for step planning and chat responses.
+Without an API key, Setupr works fully — it just uses pattern matching and heuristics instead of AI for step planning and chat responses.
 
 ## CI/CD Usage
 
@@ -89,9 +89,9 @@ For non-interactive environments:
 setup --force --plain
 ```
 
-This skips safe prompts and outputs plain text (no TUI). P-Setup still avoids inventing secrets and should stop for destructive or blocked actions.
+This skips safe prompts and outputs plain text (no TUI). Setupr still avoids inventing secrets and should stop for destructive or blocked actions.
 
-If any setup step fails in plain mode, P-Setup stops immediately and returns a non-zero exit code so CI can fail correctly.
+If any setup step fails in plain mode, Setupr stops immediately and returns a non-zero exit code so CI can fail correctly.
 
 ## Cleaning Projects
 

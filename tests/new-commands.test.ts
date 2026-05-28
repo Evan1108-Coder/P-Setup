@@ -6,7 +6,7 @@ import { existsSync } from "fs";
 // Import the router to test command routing
 import { runNonTUICommand } from "../src/commands/plain/router.js";
 
-const TEST_DIR = "/tmp/p-setup-test-" + Date.now();
+const TEST_DIR = "/tmp/setupr-test-" + Date.now();
 
 beforeEach(async () => {
   await mkdir(TEST_DIR, { recursive: true });
@@ -33,8 +33,8 @@ describe("share command", () => {
     const log = console.log;
     console.log = () => {};
     try {
-      await runNonTUICommand("share", "export", TEST_DIR, { args: ["test-export.p-setup.json"] });
-      const exported = join(TEST_DIR, "test-export.p-setup.json");
+      await runNonTUICommand("share", "export", TEST_DIR, { args: ["test-export.setupr.json"] });
+      const exported = join(TEST_DIR, "test-export.setupr.json");
       expect(existsSync(exported)).toBe(true);
       const content = JSON.parse(await readFile(exported, "utf-8"));
       expect(content.name).toBeTruthy();
@@ -60,7 +60,7 @@ describe("share command", () => {
     console.log = () => {};
     try {
       await runNonTUICommand("share", "import", TEST_DIR, { args: ["shared.json"] });
-      const importedConfig = join(TEST_DIR, ".p-setup", "imported.json");
+      const importedConfig = join(TEST_DIR, ".setupr", "imported.json");
       expect(existsSync(importedConfig)).toBe(true);
 
       // Check .env.example was created
@@ -81,7 +81,7 @@ describe("secrets command", () => {
     console.log = () => {};
     try {
       await runNonTUICommand("secrets", "init", TEST_DIR, { args: [] });
-      expect(existsSync(join(TEST_DIR, ".p-setup", "secrets.key"))).toBe(true);
+      expect(existsSync(join(TEST_DIR, ".setupr", "secrets.key"))).toBe(true);
     } finally {
       console.log = log;
     }

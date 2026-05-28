@@ -2,7 +2,7 @@ import chalk from "chalk";
 import { writeFile, mkdir } from "fs/promises";
 import { join } from "path";
 import { scanProject } from "../../scanner/index.js";
-import { createPSetupError, printPlainError } from "../../errors/index.js";
+import { createSetuprError, printPlainError } from "../../errors/index.js";
 import { loadConfig } from "../../state/config.js";
 
 interface CIFlags {
@@ -18,7 +18,7 @@ export async function cmdCI(sub: string | undefined, cwd: string, flags: CIFlags
   const resolvedPlatform = platform === "auto" ? await detectPlatform(cwd) : platform;
 
   if (!resolvedPlatform) {
-    printPlainError(createPSetupError({
+    printPlainError(createSetuprError({
       code: "CI_PLATFORM_UNKNOWN",
       command: "ci",
       cwd,
@@ -40,7 +40,7 @@ export async function cmdCI(sub: string | undefined, cwd: string, flags: CIFlags
     }
     console.log(chalk.green(`\n✓ Generated ${resolvedPlatform} CI config`));
   } catch (err) {
-    printPlainError(createPSetupError({
+    printPlainError(createSetuprError({
       code: "CI_GENERATE_FAILED",
       command: "ci",
       cwd,

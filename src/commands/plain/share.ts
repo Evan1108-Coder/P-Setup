@@ -1,7 +1,7 @@
 import chalk from "chalk";
 import { readFile, writeFile, mkdir } from "fs/promises";
 import { join, basename } from "path";
-import { createPSetupError, printPlainError } from "../../errors/index.js";
+import { createSetuprError, printPlainError } from "../../errors/index.js";
 import { scanProject } from "../../scanner/index.js";
 
 interface ShareConfig {
@@ -38,7 +38,7 @@ export async function cmdShare(
       break;
     default:
       printPlainError(
-        createPSetupError({
+        createSetuprError({
           code: "UNKNOWN_SUBCOMMAND",
           command: "share",
           subcommand: sub,
@@ -50,7 +50,7 @@ export async function cmdShare(
 }
 
 async function shareExport(cwd: string, flags: { args?: string[]; force?: boolean }): Promise<void> {
-  const outputName = flags.args?.[0] || `${basename(cwd)}.p-setup.json`;
+  const outputName = flags.args?.[0] || `${basename(cwd)}.setupr.json`;
   const outputPath = join(cwd, outputName);
 
   try {
@@ -91,7 +91,7 @@ async function shareExport(cwd: string, flags: { args?: string[]; force?: boolea
     }
   } catch (err) {
     printPlainError(
-      createPSetupError({
+      createSetuprError({
         code: "SHARE_EXPORT_FAILED",
         command: "share",
         subcommand: "export",
@@ -106,7 +106,7 @@ async function shareImport(cwd: string, flags: { args?: string[]; force?: boolea
   const inputName = flags.args?.[0];
   if (!inputName) {
     printPlainError(
-      createPSetupError({
+      createSetuprError({
         code: "SHARE_IMPORT_FAILED",
         command: "share",
         subcommand: "import",
@@ -124,7 +124,7 @@ async function shareImport(cwd: string, flags: { args?: string[]; force?: boolea
 
     if (!config.name || !config.exportedAt) {
       printPlainError(
-        createPSetupError({
+        createSetuprError({
           code: "SHARE_IMPORT_FAILED",
           command: "share",
           subcommand: "import",
@@ -148,11 +148,11 @@ async function shareImport(cwd: string, flags: { args?: string[]; force?: boolea
       console.log(chalk.green(`  ✓ Created .env.example with ${config.envKeys.length} keys`));
     }
 
-    // Create .p-setup directory with imported config
-    const psetupDir = join(cwd, ".p-setup");
+    // Create .setupr directory with imported config
+    const psetupDir = join(cwd, ".setupr");
     await mkdir(psetupDir, { recursive: true });
     await writeFile(join(psetupDir, "imported.json"), JSON.stringify(config, null, 2) + "\n");
-    console.log(chalk.green("  ✓ Saved imported config to .p-setup/imported.json"));
+    console.log(chalk.green("  ✓ Saved imported config to .setupr/imported.json"));
 
     // Show recommendations
     console.log(chalk.blue("\n  Recommendations:"));
@@ -168,7 +168,7 @@ async function shareImport(cwd: string, flags: { args?: string[]; force?: boolea
     console.log(chalk.dim("\n  Run 'setup' to apply this configuration.\n"));
   } catch (err) {
     printPlainError(
-      createPSetupError({
+      createSetuprError({
         code: "SHARE_IMPORT_FAILED",
         command: "share",
         subcommand: "import",
@@ -183,7 +183,7 @@ async function shareInspect(cwd: string, flags: { args?: string[] }): Promise<vo
   const inputName = flags.args?.[0];
   if (!inputName) {
     printPlainError(
-      createPSetupError({
+      createSetuprError({
         code: "SHARE_IMPORT_FAILED",
         command: "share",
         subcommand: "inspect",
@@ -233,7 +233,7 @@ async function shareInspect(cwd: string, flags: { args?: string[] }): Promise<vo
     console.log("");
   } catch (err) {
     printPlainError(
-      createPSetupError({
+      createSetuprError({
         code: "SHARE_IMPORT_FAILED",
         command: "share",
         subcommand: "inspect",

@@ -11,14 +11,14 @@ import { hasProjectSignals } from "../projectSignals.js";
 import { runCommand } from "../../executor/index.js";
 import { intelligentResponse } from "../../ai/intelligence.js";
 import { scanResultToDSL } from "../../ai/dsl.js";
-import { classifyCommandFailure, createPSetupError, type PSetupError } from "../../errors/index.js";
+import { classifyCommandFailure, createSetuprError, type SetuprError } from "../../errors/index.js";
 import type { ScanResult } from "../../scanner/index.js";
 
 interface Check {
   label: string;
   status: "pass" | "fail" | "warn" | "checking";
   detail?: string;
-  error?: PSetupError;
+  error?: SetuprError;
 }
 
 interface DoctorLayoutProps {
@@ -72,7 +72,7 @@ export function DoctorLayout({ scan, cwd }: DoctorLayoutProps) {
   return (
     <Box flexDirection="column" width={terminal.width} height={terminal.height}>
       <Box height={1} justifyContent="space-between">
-        <Text color={colors.primary} bold> P-Setup Doctor</Text>
+        <Text color={colors.primary} bold> Setupr Doctor</Text>
         <Text color={noProject ? colors.warning : colors.textDim}>{summary}</Text>
       </Box>
 
@@ -160,7 +160,7 @@ async function runDiagnostics(scan: ScanResult, cwd: string, noProject: boolean)
       label: "Project files",
       status: "warn",
       detail: "none detected in current directory",
-      error: createPSetupError({ code: "NO_PROJECT_DETECTED", command: "doctor", cwd, canContinue: true }),
+      error: createSetuprError({ code: "NO_PROJECT_DETECTED", command: "doctor", cwd, canContinue: true }),
     });
   }
 
@@ -222,7 +222,7 @@ async function runDiagnostics(scan: ScanResult, cwd: string, noProject: boolean)
         label: "Dependencies installed",
         status: "fail",
         detail: `run '${scan.packageManager} install'`,
-        error: createPSetupError({
+        error: createSetuprError({
           code: "INSTALL_FAILED",
           command: "doctor",
           cwd,
@@ -256,7 +256,7 @@ async function runDiagnostics(scan: ScanResult, cwd: string, noProject: boolean)
         label: ".env file",
         status: "warn",
         detail: "missing - run 'setup env init'",
-        error: createPSetupError({ code: "ENV_CHECK_FAILED", command: "doctor", cwd, details: [".env.example exists but .env is missing."], canContinue: true }),
+        error: createSetuprError({ code: "ENV_CHECK_FAILED", command: "doctor", cwd, details: [".env.example exists but .env is missing."], canContinue: true }),
       });
     }
   }

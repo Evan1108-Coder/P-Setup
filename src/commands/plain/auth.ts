@@ -28,7 +28,7 @@ import { updateConfig } from "../../state/config.js";
 import { readFile, writeFile } from "fs/promises";
 import { join } from "path";
 import { parseEnvPairs } from "../../env/index.js";
-import { classifyAIProviderError, createPSetupError, fromUnknownError, printPlainError, type PSetupError } from "../../errors/index.js";
+import { classifyAIProviderError, createSetuprError, fromUnknownError, printPlainError, type SetuprError } from "../../errors/index.js";
 
 interface AuthFlags {
   force?: boolean;
@@ -84,7 +84,7 @@ export async function cmdAuth(sub: string | undefined, cwd: string, flags: AuthF
         await authMigrate(cwd, flags);
         return;
       default:
-        printPlainError(createPSetupError({
+        printPlainError(createSetuprError({
           code: "UNKNOWN_SUBCOMMAND",
           command: "auth",
           subcommand: sub,
@@ -92,18 +92,18 @@ export async function cmdAuth(sub: string | undefined, cwd: string, flags: AuthF
         }));
     }
   } catch (err) {
-    printPlainError(isPSetupError(err) ? err : fromUnknownError(err, { command: "auth", subcommand: sub, cwd }));
+    printPlainError(isSetuprError(err) ? err : fromUnknownError(err, { command: "auth", subcommand: sub, cwd }));
   }
 }
 
-function isPSetupError(error: unknown): error is PSetupError {
-  const value = error as Partial<PSetupError> | undefined;
+function isSetuprError(error: unknown): error is SetuprError {
+  const value = error as Partial<SetuprError> | undefined;
   return Boolean(value?.code && value.title && value.explanation && value.timestamp);
 }
 
 async function authList(): Promise<void> {
   const rows = await listStoredProviderKeys();
-  console.log(chalk.blue.bold("\n  P-Setup Auth\n"));
+  console.log(chalk.blue.bold("\n  Setupr Auth\n"));
   console.log(chalk.dim(`  Global secrets: ${secretsPath()}\n`));
   for (const row of rows) {
     const source = getProviderKeySource(row.provider);
@@ -125,7 +125,7 @@ async function authStatus(): Promise<void> {
   const model = getDefaultModel();
   const source = getProviderKeySource(model.provider);
   const key = getProviderEnvValue(model.provider);
-  console.log(chalk.blue.bold("\n  P-Setup Auth Status\n"));
+  console.log(chalk.blue.bold("\n  Setupr Auth Status\n"));
   console.log(`  Active model:   ${chalk.white(model.id)}`);
   console.log(`  Provider:       ${chalk.white(PROVIDER_LABELS[model.provider])}`);
   console.log(`  Key source:     ${chalk.white(source || "missing")}`);
@@ -153,7 +153,7 @@ async function authSetKey(provider: string | undefined, flags: AuthFlags): Promi
   }
   const apiKey = flags.key || await promptSecret(`Enter ${PROVIDER_LABELS[resolved]} API key: `);
   if (!apiKey.trim()) {
-    printPlainError(createPSetupError({ code: "AUTH_KEY_EMPTY", command: "auth", subcommand: "set-key" }));
+    printPlainError(createSetuprError({ code: "AUTH_KEY_EMPTY", command: "auth", subcommand: "set-key" }));
     return;
   }
 
@@ -183,19 +183,19 @@ async function authRemove(provider: string | undefined, flags: AuthFlags): Promi
 
 async function authReset(flags: AuthFlags): Promise<void> {
   if (!flags.force) {
-    const confirmed = await confirm("Remove every saved P-Setup provider API key?");
+    const confirmed = await confirm("Remove every saved Setupr provider API key?");
     if (!confirmed) {
       console.log(chalk.dim("Auth reset cancelled."));
       return;
     }
   }
   await clearStoredProviderKeys();
-  console.log(chalk.green("✓ Removed all saved P-Setup auth keys."));
+  console.log(chalk.green("✓ Removed all saved Setupr auth keys."));
 }
 
 async function authTest(provider?: string): Promise<void> {
   const providers = provider ? [provider] : AUTH_PROVIDERS;
-  console.log(chalk.blue.bold("\n  P-Setup Auth Test\n"));
+  console.log(chalk.blue.bold("\n  Setupr Auth Test\n"));
   console.log(chalk.dim("  Sends tiny requests to configured providers; raw keys are never printed.\n"));
   let failures = 0;
   for (const name of providers) {
@@ -233,7 +233,7 @@ async function authTest(provider?: string): Promise<void> {
 }
 
 async function authModels(): Promise<void> {
-  console.log(chalk.blue.bold("\n  P-Setup Auth Models\n"));
+  console.log(chalk.blue.bold("\n  Setupr Auth Models\n"));
   const active = getDefaultModel();
   for (const provider of AUTH_PROVIDERS) {
     const hasKey = Boolean(getProviderEnvValue(provider));
@@ -249,12 +249,12 @@ async function authModels(): Promise<void> {
 
 async function authUse(modelId: string | undefined): Promise<void> {
   if (!modelId) {
-    printPlainError(createPSetupError({ code: "AI_MODEL_REQUIRED", command: "auth", subcommand: "use" }));
+    printPlainError(createSetuprError({ code: "AI_MODEL_REQUIRED", command: "auth", subcommand: "use" }));
     return;
   }
   const model = resolveModel(modelId);
   if (!model) {
-    printPlainError(createPSetupError({
+    printPlainError(createSetuprError({
       code: "AI_MODEL_UNKNOWN",
       command: "auth",
       subcommand: "use",
@@ -281,7 +281,7 @@ async function authDoctor(): Promise<void> {
 }
 
 async function authLogin(flags: AuthFlags): Promise<void> {
-  console.log(chalk.blue.bold("\n  P-Setup Auth Login\n"));
+  console.log(chalk.blue.bold("\n  Setupr Auth Login\n"));
   const provider = await promptChoice("Provider", AUTH_PROVIDERS);
   await authSetKey(provider, flags);
   await authTest(provider);
@@ -306,10 +306,10 @@ async function authMigrate(cwd: string, flags: AuthFlags): Promise<void> {
     }
   }
   if (migrated.length === 0) {
-    console.log(chalk.dim("No P-Setup provider API keys were found in project .env."));
+    console.log(chalk.dim("No Setupr provider API keys were found in project .env."));
     return;
   }
-  console.log(chalk.yellow(`Found ${migrated.length} P-Setup provider key${migrated.length === 1 ? "" : "s"} in project .env.`));
+  console.log(chalk.yellow(`Found ${migrated.length} Setupr provider key${migrated.length === 1 ? "" : "s"} in project .env.`));
   for (const item of migrated) {
     console.log(chalk.dim(`  • ${item.keyName} -> ${PROVIDER_LABELS[item.provider]} ${maskApiKey(item.value)}`));
   }
@@ -350,7 +350,7 @@ function modelArg(flags: AuthFlags): string | undefined {
 
 function requireProvider(provider: string | undefined, setExitCode = true): AIProvider | null {
   if (!provider) {
-    printPlainError(createPSetupError({
+    printPlainError(createSetuprError({
       code: "AUTH_PROVIDER_REQUIRED",
       command: "auth",
       details: [`Providers: ${AUTH_PROVIDERS.join(", ")}`],
@@ -359,7 +359,7 @@ function requireProvider(provider: string | undefined, setExitCode = true): AIPr
     return null;
   }
   if (!isAuthProvider(provider)) {
-    printPlainError(createPSetupError({
+    printPlainError(createSetuprError({
       code: "AUTH_PROVIDER_UNKNOWN",
       command: "auth",
       details: [`Received: ${provider}`, `Providers: ${AUTH_PROVIDERS.join(", ")}`],
@@ -378,7 +378,7 @@ async function confirm(question: string): Promise<boolean> {
 
 async function promptSecret(question: string): Promise<string> {
   if (!process.stdin.isTTY) {
-    printPlainError(createPSetupError({
+    printPlainError(createSetuprError({
       code: "NON_INTERACTIVE_INPUT_REQUIRED",
       command: "auth",
       subcommand: "set-key",
@@ -397,7 +397,7 @@ async function promptChoice(label: string, choices: AIProvider[]): Promise<AIPro
   if (Number.isInteger(numeric) && choices[numeric - 1]) return choices[numeric - 1];
   const trimmed = answer.trim();
   if (isAuthProvider(trimmed)) return trimmed;
-  printPlainError(createPSetupError({
+  printPlainError(createSetuprError({
     code: "AUTH_PROVIDER_UNKNOWN",
     command: "auth",
     subcommand: "login",
@@ -456,7 +456,7 @@ function askHidden(question: string): Promise<string> {
         if (char === "\u0003") {
           cleanup();
           output.write("\n");
-          printPlainError(createPSetupError({
+          printPlainError(createSetuprError({
             code: "COMMAND_ABORTED",
             command: "auth",
             subcommand: "set-key",

@@ -154,12 +154,12 @@ EMPTY=
 
   it("masks sensitive env values without hiding ordinary config", () => {
     expect(maskSensitiveValue("OPENAI_API_KEY", "sk-1234567890")).toBe("*********7890");
-    expect(maskSensitiveValue("APP_NAME", "p-setup")).toBe("p-setup");
+    expect(maskSensitiveValue("APP_NAME", "setupr")).toBe("setupr");
     expect(maskEnvVars([
-      { key: "APP_NAME", value: "p-setup" },
+      { key: "APP_NAME", value: "setupr" },
       { key: "DATABASE_PASSWORD", value: "secretpw" },
     ])).toEqual([
-      { key: "APP_NAME", value: "p-setup", masked: false },
+      { key: "APP_NAME", value: "setupr", masked: false },
       { key: "DATABASE_PASSWORD", value: "****etpw", masked: true },
     ]);
   });
@@ -169,7 +169,7 @@ EMPTY=
       scan,
       steps,
       env: [
-        { key: "APP_NAME", value: "p-setup" },
+        { key: "APP_NAME", value: "setupr" },
         { key: "STRIPE_SECRET_KEY", value: "sk_live_123456" },
       ],
       force: true,
@@ -178,7 +178,7 @@ EMPTY=
     expect(summary.title).toBe("3 setup steps planned for typescript / vite / pnpm");
     expect(summary.commands).toEqual(["pnpm install", "pnpm run build"]);
     expect(summary.env).toEqual([
-      { key: "APP_NAME", value: "p-setup", masked: false },
+      { key: "APP_NAME", value: "setupr", masked: false },
       { key: "STRIPE_SECRET_KEY", value: "**********3456", masked: true },
     ]);
     expect(summary.requiresConfirmation).toBe(true);

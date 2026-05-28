@@ -1,7 +1,7 @@
 import { scanProject } from "../scanner/index.js";
 import { createPreExecutionWarning } from "../ai/setupFlow.js";
 import { describeDefaultModelSelection } from "../ai/models.js";
-import { createPSetupError, printPlainError } from "../errors/index.js";
+import { createSetuprError, printPlainError } from "../errors/index.js";
 import { formatCheckpointAge, loadCheckpoint } from "../state/checkpoint.js";
 import chalk from "chalk";
 
@@ -16,7 +16,7 @@ export async function showPreWarning(
   subCommand?: string,
   options: PreWarningOptions = {}
 ): Promise<boolean> {
-  setNeutralTitle(`P-Setup ${command}`);
+  setNeutralTitle(`Setupr ${command}`);
   const scan = await scanProject(cwd);
 
   console.log("");
@@ -31,7 +31,7 @@ export async function showPreWarning(
       console.log("");
     }
   }
-  console.log(chalk.yellow(`  ⚠  P-Setup ${command}${subCommand ? ` ${subCommand}` : ""}`));
+  console.log(chalk.yellow(`  ⚠  Setupr ${command}${subCommand ? ` ${subCommand}` : ""}`));
   for (const line of createPreExecutionWarning(scan, command, force)) {
     console.log(chalk.dim("  • ") + line);
   }
@@ -53,12 +53,12 @@ export async function showPreWarning(
     console.log(chalk.dim("  Press Enter to continue, Ctrl+C to cancel..."));
     const confirmed = await waitForEnter();
     if (!confirmed && options.requireConfirmation) {
-      printPlainError(createPSetupError({
+      printPlainError(createSetuprError({
         code: "NON_INTERACTIVE_CONFIRMATION_REQUIRED",
         command,
         subcommand: subCommand,
         cwd,
-        forceBehavior: "With --force, P-Setup skips ordinary confirmations but still stops before serious damage.",
+        forceBehavior: "With --force, Setupr skips ordinary confirmations but still stops before serious damage.",
       }));
       return false;
     }
@@ -89,7 +89,7 @@ function waitForEnter(): Promise<boolean> {
       const key = data.toString();
       if (key === "\x03") {
         console.log("");
-        printPlainError(createPSetupError({
+        printPlainError(createSetuprError({
           code: "COMMAND_ABORTED",
           details: ["Cancelled before the TUI launched."],
           exitCode: 130,

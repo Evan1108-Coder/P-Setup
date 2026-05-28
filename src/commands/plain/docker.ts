@@ -3,7 +3,7 @@ import { writeFile } from "fs/promises";
 import { existsSync } from "fs";
 import { join } from "path";
 import { scanProject } from "../../scanner/index.js";
-import { createPSetupError, printPlainError } from "../../errors/index.js";
+import { createSetuprError, printPlainError } from "../../errors/index.js";
 
 interface DockerFlags {
   force?: boolean;
@@ -19,7 +19,7 @@ export async function cmdDocker(sub: string | undefined, cwd: string, flags: Doc
     case "compose": return dockerCompose(cwd, flags);
     case "check": return dockerCheck(cwd);
     default:
-      printPlainError(createPSetupError({
+      printPlainError(createSetuprError({
         code: "UNKNOWN_SUBCOMMAND",
         command: "docker",
         subcommand: sub,
@@ -52,7 +52,7 @@ async function dockerGenerate(cwd: string, flags: DockerFlags): Promise<void> {
   } else if (lang === "rust") {
     dockerfile = generateRustDockerfile(scan);
   } else {
-    printPlainError(createPSetupError({
+    printPlainError(createSetuprError({
       code: "DOCKER_GENERATE_FAILED",
       command: "docker",
       cwd,
@@ -118,7 +118,7 @@ async function dockerCheck(cwd: string): Promise<void> {
   const result = await runCommand("docker --version", cwd);
 
   if (result.exitCode !== 0) {
-    printPlainError(createPSetupError({ code: "DOCKER_NOT_INSTALLED", command: "docker", subcommand: "check", cwd }));
+    printPlainError(createSetuprError({ code: "DOCKER_NOT_INSTALLED", command: "docker", subcommand: "check", cwd }));
     return;
   }
 
@@ -243,7 +243,7 @@ function generateDockerignore(language: string | null): string {
   const lang = (language || "").toLowerCase();
   const lines = [
     "node_modules", ".git", ".gitignore", "*.md", ".env", ".env.*",
-    "dist", "build", "coverage", ".nyc_output", ".p-setup",
+    "dist", "build", "coverage", ".nyc_output", ".setupr",
     "Dockerfile", "docker-compose*.yml", ".dockerignore",
   ];
   if (lang === "python") lines.push("__pycache__", "*.pyc", ".venv", "venv");
