@@ -1,5 +1,4 @@
 import chalk from "chalk";
-import { existsSync } from "fs";
 import { readdir, writeFile, mkdir } from "fs/promises";
 import { join } from "path";
 import { createSetuprError, printPlainError } from "../../errors/index.js";
@@ -160,7 +159,7 @@ async function scaffoldGo(cwd: string): Promise<void> {
   console.log(chalk.green("  ✓ main.go"));
 }
 
-async function initFromTemplate(cwd: string, template: string, flags: InitFlags): Promise<void> {
+async function initFromTemplate(cwd: string, template: string, _flags: InitFlags): Promise<void> {
   const builtinTemplates: Record<string, () => Promise<void>> = {
     "express-api": () => scaffoldNode(cwd, "typescript", "npm", "express"),
     "react-app": () => scaffoldReactApp(cwd),
