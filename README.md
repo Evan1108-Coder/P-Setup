@@ -17,17 +17,20 @@ npm install -g setupr
 ## Quick Start
 
 ```bash
-# Full project setup (scan, install, configure, verify)
-setup
+# Open the project dashboard / home screen
+setupr
+
+# Full project setup (scan, plan, install/configure, verify)
+setupr setup
 
 # Configure Setupr AI once, globally
-setup auth login
+setupr auth login
 
 # With minimal prompts (CI-friendly, still stops for blockers/destructive risk)
-setup --force
+setupr setup --force
 
 # Plain terminal output (no TUI)
-setup --plain
+setupr setup --plain
 ```
 
 ## Commands
@@ -36,8 +39,10 @@ setup --plain
 
 | Command | Description |
 |---------|-------------|
+| `setupr` / `dashboard` | Project dashboard with health, git, env, processes, history, and quick commands |
 | `setup` | Full project setup — scan, install runtime, deps, env, verify |
-| `start` | Detect and run your project (dev server) |
+| `status` | Dashboard/status view with plain, JSON, or TUI output |
+| `start` | Start and track a managed project process |
 | `doctor` | Diagnose environment health (runtimes, deps, ports) |
 | `update` | Check for dependency updates with breaking change warnings |
 | `clean` | Remove artifacts (`--deps`, `--share`, `--all`; positional `deps`, `share`, `all` also work) |
@@ -48,6 +53,9 @@ setup --plain
 | Command | Description |
 |---------|-------------|
 | `env [init\|check\|sync\|smart]` | Manage .env files |
+| `ps` | List Setupr-managed processes |
+| `stop [target]` | Stop one or all managed processes |
+| `restart [target]` | Restart a managed process |
 | `info` | Show project summary |
 | `list` | List available scripts/commands |
 | `run <script>` | Run a project script |
@@ -55,17 +63,21 @@ setup --plain
 | `add <package>` | Smart add dependency |
 | `remove <package>` | Remove dependency |
 | `port [number]` | Check/find/kill port |
-| `deps` | Dependency tree, outdated, audit |
+| `deps [list\|audit\|why\|licenses]` | Dependency tree, audit summary, package reasoning, and license checks |
 | `config` | Manage setupr config |
 | `help [command]` | Show global or command-specific help |
 | `lock` | Snapshot environment state |
 | `diff` | Compare current vs locked state |
-| `logs` | Tail project logs |
+| `logs [target]` | Show managed process logs, falling back to package-manager logs |
 | `test` | Detect and run test suite |
 | `build` | Detect and run build command |
 | `deploy` | Run deploy scripts |
 | `open [repo\|ide]` | Open in browser/IDE/repo |
-| `git` | Git workflows: init, hooks, flow, commit, branch, PR, stash, rebase, tag, release, status, log, sync, clean, ignore, changelog, blame, cherry-pick, worktree, bisect, contributors, undo |
+| `git` | Git workflows plus commit-message, PR-description, branch-check, and conflict helper |
+| `analyze` | Deterministic project architecture overview |
+| `explain <file>` | Explain a file from imports, exports, functions, classes, and role signals |
+| `refactor <file>` | Suggest deterministic refactors for a file |
+| `todo` | Scan TODO/FIXME/HACK markers and prioritize them |
 | `init` | Scaffold new projects from stacks or templates |
 | `migrate <npm\|yarn\|pnpm\|bun>` | Migrate package manager metadata and lockfiles |
 | `ci <github\|gitlab\|bitbucket\|circleci>` | Generate CI/CD config |
@@ -78,7 +90,7 @@ setup --plain
 | `notes <add\|list\|remove\|clear>` | Manage project-local notes in `.setupr` |
 | `history [list] [limit]` | Show recent project-local Setupr history |
 | `context <show\|export\|import>` | Export/import notes and history for team handoff |
-| `plugin <install\|remove\|list\|info\|enable\|disable>` | Manage Setupr plugins |
+| `plugin <create\|validate\|doctor\|install\|remove\|list\|info\|enable\|disable>` | Manage Setupr plugins and plugin development |
 | `lint <run\|setup\|fix>` | Run or set up linting |
 | `format <run\|check\|setup>` | Run or set up formatting |
 | `scaffold <type> <name>` | Generate components, pages, APIs, hooks, models, tests, services, or middleware |
@@ -231,6 +243,51 @@ setup context import team-context.json
 ```
 
 Notes are saved in `.setupr/notes.json`. History uses `.setupr/history.jsonl`, and context export/import moves a deterministic bundle of notes plus history for team handoff.
+
+### Project Dashboard And Processes
+
+```bash
+setupr
+setupr status --json
+setupr start
+setupr ps
+setupr logs
+setupr stop
+setupr restart dev --watch
+```
+
+`setupr` with no arguments opens the dashboard, not setup execution. The dashboard summarizes real project signals: scanner results, git state, env status, managed processes, recent history, and available commands. `setupr start` runs the detected `dev`, `start`, `serve`, `develop`, or `watch` script under a Setupr supervisor, writes logs under `.setupr/logs/processes`, and exposes it through `ps`, `logs`, `stop`, and `restart`.
+
+### Git, Code, And Dependency Intelligence
+
+```bash
+setupr git commit-message
+setupr git pr-description
+setupr git branch-check
+setupr git conflicts
+setupr analyze
+setupr explain src/index.ts
+setupr refactor src/index.ts
+setupr todo
+setupr deps audit
+setupr deps why react
+setupr deps licenses
+```
+
+These commands work offline first. They use deterministic project, file, git, and lockfile signals, then AI-capable flows can layer on `--smart` where supported.
+
+### Plugin Development
+
+```bash
+setupr plugin create team-tools
+cd setupr-plugin-team-tools
+npm install
+npm run build
+setupr plugin validate .
+setupr plugin doctor
+```
+
+Plugins are installed into the project-local `.setupr/plugins` area and registered in global Setupr config. `plugin create` scaffolds a package with a `setupr` manifest block and starter entrypoint; `plugin validate` checks package metadata and entrypoint shape before install/runtime loading.
 
 ## Flags
 

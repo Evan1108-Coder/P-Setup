@@ -107,6 +107,33 @@ Or fix npm permissions: https://docs.npmjs.com/resolving-eacces-permissions-erro
 
 In `--plain` mode, setup stops after the failed step and exits non-zero. Fix the failing command, then rerun `setup --plain`.
 
+### Managed process shows crashed after stop
+
+`setupr stop` marks the supervisor entry as stopped. If a process still appears crashed, it usually means the child process ignored the stop signal or the registry was written by an older Setupr version.
+
+```bash
+setupr ps
+setupr logs <target>
+setupr stop <target> --force
+```
+
+Managed process state lives in `.setupr/processes.json`; logs live in `.setupr/logs/processes/`.
+
+### Plugin validation fails
+
+Run validation from the plugin folder or pass the plugin path:
+
+```bash
+setupr plugin validate ./setupr-plugin-my-tools
+```
+
+Useful checks:
+
+- `package.json` has `name`, `version`, `main` or `exports`
+- the name or keywords include `setupr-plugin`
+- `package.json` contains a `setupr` block with `apiVersion: "1"`
+- the built entrypoint exists after `npm run build`, or `src/index.ts` exists during development
+
 ### `.env` was not created
 
 Setupr creates `.env` from `.env.example` when a template is present. If `.env` already exists, `setup env init` leaves it unchanged unless you pass:

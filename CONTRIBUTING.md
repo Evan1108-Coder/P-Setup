@@ -19,6 +19,8 @@ src/
 ├── scanner/      # Project detection (language, framework, PM, services)
 ├── ai/           # Multi-provider AI client (6 providers), intelligence layers, DSL
 ├── executor/     # Step execution, checkpoint saving, undo/redo
+├── processes/    # Managed process supervisor, registry, and logs
+├── status/       # Dashboard/status collection
 ├── context/      # Environment context collection
 ├── state/        # Zustand store, checkpoint, config
 └── utils/        # Shared utilities
@@ -39,18 +41,42 @@ src/
 
 ### Non-TUI Command
 1. Add handler in `src/commands/plain/router.ts`
-2. Add to the help text in `src/cli/index.ts`
+2. Add the command to `src/cli/commandRegistry.ts`
+3. Add focused tests under `tests/`
 
 ### TUI Command
 1. Create layout in `src/tui/layouts/`
 2. Add case in `src/tui/App.tsx`
-3. Add to TUI command list in `src/cli/index.ts`
+3. Add the command to `src/cli/commandRegistry.ts`
+4. Verify alternate screen, resize behavior, mouse/click input, and bounded text rendering
+
+## Building Plugins
+
+Use Setupr's plugin developer commands instead of hand-writing boilerplate:
+
+```bash
+setupr plugin create my-tools
+cd setupr-plugin-my-tools
+npm install
+npm run build
+setupr plugin validate .
+```
+
+Plugin packages should include:
+
+- a package name or keyword containing `setupr-plugin`
+- a `setupr` block in `package.json` with `apiVersion: "1"`
+- a built entrypoint exposed through `main` or `exports`
+- deterministic failure behavior: invalid manifests should surface `PLUGIN_INVALID`, install/load failures should surface `PLUGIN_LOAD_FAILED`
 
 ## Testing
 
 ```bash
 npm test          # Run tests
 npm run typecheck # Type check
+npm run lint      # Lint source
+npm run build     # Build the npm package entrypoint
+npm run smoke:fixtures # Exercise representative CLI/TUI fixtures
 ```
 
 ## Code Style
