@@ -257,9 +257,12 @@ const HELP_NODES: Record<string, HelpNode> = {
   },
   plugin: {
     name: "plugin",
-    summary: "Setupr plugin management.",
-    usage: "setup plugin <install|remove|list|info|enable|disable> [name-or-url]",
+    summary: "Setupr plugin management and plugin developer tooling.",
+    usage: "setupr plugin <create|validate|doctor|install|remove|list|info|enable|disable> [name-or-url]",
     commands: [
+      { name: "create", summary: "Scaffold a local Setupr plugin project." },
+      { name: "validate", summary: "Validate a plugin manifest and entrypoint." },
+      { name: "doctor", summary: "Show plugin developer environment details." },
       { name: "install", summary: "Install a plugin from npm or git." },
       { name: "remove", summary: "Remove an installed plugin." },
       { name: "list", summary: "List installed plugins." },
@@ -267,7 +270,7 @@ const HELP_NODES: Record<string, HelpNode> = {
       { name: "enable", summary: "Enable a plugin." },
       { name: "disable", summary: "Disable a plugin." },
     ],
-    examples: ["setup plugin list", "setup plugin install setupr-plugin-example", "setup plugin disable my-plugin"],
+    examples: ["setupr plugin create team-tools", "setupr plugin validate ./setupr-plugin-team-tools", "setupr plugin install setupr-plugin-example"],
   },
   lint: {
     name: "lint",

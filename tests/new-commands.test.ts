@@ -229,6 +229,39 @@ describe("plugin command", () => {
       console.log = log;
     }
   });
+
+  it("should scaffold and validate plugin projects", async () => {
+    const log = console.log;
+    const outputs: string[] = [];
+    console.log = (...args: unknown[]) => outputs.push(args.join(" "));
+    try {
+      await runNonTUICommand("plugin", "create", TEST_DIR, { args: ["team-tools"] });
+      const pluginDir = join(TEST_DIR, "setupr-plugin-team-tools");
+      expect(existsSync(join(pluginDir, "package.json"))).toBe(true);
+      expect(existsSync(join(pluginDir, "src", "index.ts"))).toBe(true);
+
+      await runNonTUICommand("plugin", "validate", TEST_DIR, { args: [pluginDir] });
+      expect(outputs.join("\n")).toContain("Manifest looks valid");
+    } finally {
+      console.log = log;
+    }
+  });
+
+  it("should report invalid plugin manifests without throwing", async () => {
+    const pluginDir = join(TEST_DIR, "bad-plugin");
+    await mkdir(pluginDir, { recursive: true });
+    await writeFile(join(pluginDir, "package.json"), JSON.stringify({ name: "bad-plugin" }));
+
+    const log = console.log;
+    const outputs: string[] = [];
+    console.log = (...args: unknown[]) => outputs.push(args.join(" "));
+    try {
+      await runNonTUICommand("plugin", "validate", TEST_DIR, { args: [pluginDir] });
+      expect(outputs.join("\n")).toContain("package.json must include version");
+    } finally {
+      console.log = log;
+    }
+  });
 });
 
 describe("ci command", () => {
