@@ -22,7 +22,11 @@ export async function cmdGit(sub: string | undefined, cwd: string, flags: GitFla
     case "init": return gitInit(cwd, flags);
     case "hooks": return gitHooks(cwd, flags);
     case "flow": return gitFlow(cwd, flags);
+    case "commit-message": return gitCommitMessage(cwd);
     case "commit": return gitCommit(cwd, flags);
+    case "pr-description": return gitPRDescription(cwd);
+    case "branch-check": return gitBranchCheck(cwd);
+    case "conflicts": return gitConflicts(cwd);
     case "branch": return gitBranch(cwd, flags);
     case "pr": return gitPR(cwd, flags);
     case "stash": return gitStash(cwd, flags);
@@ -47,7 +51,7 @@ export async function cmdGit(sub: string | undefined, cwd: string, flags: GitFla
         command: "git",
         subcommand: sub,
         cwd,
-        details: ["Valid: init, hooks, flow, commit, branch, pr, stash, rebase, tag, release, status, log, sync, clean, ignore, changelog, blame, cherry-pick, worktree, bisect, contributors, undo"],
+        details: ["Valid: init, hooks, flow, commit-message, commit, pr-description, branch-check, conflicts, branch, pr, stash, rebase, tag, release, status, log, sync, clean, ignore, changelog, blame, cherry-pick, worktree, bisect, contributors, undo"],
       }));
   }
 }
@@ -60,6 +64,12 @@ async function isGitAvailable(cwd: string): Promise<boolean> {
 async function isGitRepo(cwd: string): Promise<boolean> {
   const result = await runCommand("git rev-parse --is-inside-work-tree", cwd);
   return result.exitCode === 0 && result.stdout.trim() === "true";
+}
+
+async function requireGitRepo(cwd: string, subcommand: string): Promise<boolean> {
+  if (await isGitRepo(cwd)) return true;
+  printPlainError(createSetuprError({ code: "GIT_NOT_A_REPO", command: "git", subcommand, cwd }));
+  return false;
 }
 
 async function gitInit(cwd: string, flags: GitFlags): Promise<void> {
@@ -194,6 +204,31 @@ async function gitFlow(cwd: string, flags: GitFlags): Promise<void> {
   }
 }
 
+async function gitCommitMessage(cwd: string): Promise<void> {
+  if (!await requireGitRepo(cwd, "commit-message")) return;
+
+  const stagedFiles = (await runCommand("git diff --cached --name-only", cwd)).stdout.trim().split("\n").filter(Boolean);
+  const unstagedFiles = (await runCommand("git diff --name-only", cwd)).stdout.trim().split("\n").filter(Boolean);
+  const untrackedFiles = await gitUntrackedFiles(cwd);
+  const files = (stagedFiles.length > 0 ? stagedFiles : [...unstagedFiles, ...untrackedFiles]).filter((file) => !isSetuprInternalPath(file));
+  if (files.length === 0) {
+    console.log(chalk.yellow("No changed files found."));
+    return;
+  }
+
+  const stat = await runCommand(stagedFiles.length > 0 ? "git diff --cached --stat" : "git diff --stat", cwd);
+  const type = inferCommitType(files);
+  const scope = inferCommitScope(files);
+  const subject = summarizeChangedFiles(files);
+  const message = `${type}${scope ? `(${scope})` : ""}: ${subject}`;
+
+  console.log(chalk.blue.bold("\n  Suggested Commit Message\n"));
+  console.log(chalk.white(`  ${message}`));
+  console.log("");
+  if (stat.stdout.trim()) console.log(chalk.dim(stat.stdout.trim()));
+  console.log(chalk.dim("\n  Review before committing. Use: setupr git commit \"<message>\""));
+}
+
 async function gitCommit(cwd: string, flags: GitFlags): Promise<void> {
   if (!await isGitRepo(cwd)) {
     printPlainError(createSetuprError({ code: "GIT_NOT_A_REPO", command: "git", subcommand: "commit", cwd }));
@@ -253,6 +288,79 @@ async function gitCommit(cwd: string, flags: GitFlags): Promise<void> {
   } else {
     printPlainError(createSetuprError({ code: "GIT_COMMAND_FAILED", command: "git", subcommand: "commit", cwd, details: [result.stderr] }));
   }
+}
+
+async function gitPRDescription(cwd: string): Promise<void> {
+  if (!await requireGitRepo(cwd, "pr-description")) return;
+
+  const branch = (await runCommand("git branch --show-current", cwd)).stdout.trim() || "current branch";
+  const base = await detectMainBranch(cwd);
+  const range = base ? `${base}...HEAD` : "HEAD";
+  const commits = (await runCommand(`git log --oneline ${range} 2>/dev/null || git log --oneline -10`, cwd)).stdout.trim().split("\n").filter(Boolean);
+  const stat = await runCommand(`git diff --stat ${range} 2>/dev/null || git diff --stat HEAD~1..HEAD`, cwd);
+  const files = (await runCommand(`git diff --name-only ${range} 2>/dev/null || git diff --name-only HEAD~1..HEAD`, cwd)).stdout.trim().split("\n").filter(Boolean);
+
+  console.log(chalk.blue.bold("\n  PR Description Draft\n"));
+  console.log(`## Summary`);
+  if (commits.length === 0 && files.length === 0) {
+    console.log("- No branch diff found yet.");
+  } else {
+    for (const line of summarizeFilesByArea(files)) console.log(`- ${line}`);
+  }
+  console.log("\n## Changes");
+  for (const commit of commits.slice(0, 10)) console.log(`- ${commit.replace(/^[a-f0-9]+\s+/, "")}`);
+  if (commits.length === 0) console.log("- No commits found in comparison range.");
+  console.log("\n## Testing");
+  console.log("- Not run by Setupr automatically. Fill this in before opening the PR.");
+  console.log("");
+  console.log(chalk.dim(`Branch: ${branch}${base ? ` · Base: ${base}` : ""}`));
+  if (stat.stdout.trim()) console.log(chalk.dim(stat.stdout.trim()));
+}
+
+async function gitBranchCheck(cwd: string): Promise<void> {
+  if (!await requireGitRepo(cwd, "branch-check")) return;
+
+  const branch = (await runCommand("git branch --show-current", cwd)).stdout.trim();
+  const base = await detectMainBranch(cwd);
+  const dirty = (await gitStatusPaths(cwd)).filter((file) => !isSetuprInternalPath(file));
+  const aheadBehind = base ? (await runCommand(`git rev-list --left-right --count ${base}...HEAD 2>/dev/null`, cwd)).stdout.trim() : "";
+  const [behind = "0", ahead = "0"] = aheadBehind.split(/\s+/);
+
+  console.log(chalk.blue.bold("\n  Branch Strategy Check\n"));
+  if (!branch) {
+    console.log(chalk.yellow("  Detached HEAD. Create or switch to a branch before feature work."));
+  } else {
+    const onMain = ["main", "master", "trunk"].includes(branch);
+    console.log(`  Current branch: ${onMain ? chalk.yellow(branch) : chalk.green(branch)}`);
+    if (onMain) console.log(chalk.yellow("  Warning: you are on the main branch. Create a feature branch before risky changes."));
+  }
+  console.log(`  Working tree:   ${dirty.length === 0 ? chalk.green("clean") : chalk.yellow(`${dirty.length} changed file(s)`)}`);
+  if (base) console.log(`  Compared with:  ${base} (${ahead} ahead, ${behind} behind)`);
+  console.log("");
+}
+
+async function gitConflicts(cwd: string): Promise<void> {
+  if (!await requireGitRepo(cwd, "conflicts")) return;
+
+  const unmerged = (await runCommand("git diff --name-only --diff-filter=U", cwd)).stdout.trim().split("\n").filter(Boolean);
+  const markerFiles = (await runCommand("git grep --untracked -n -e \"^<<<<<<<\" -e \"^=======\" -e \"^>>>>>>>\" -- . 2>/dev/null || true", cwd)).stdout.trim().split("\n").filter(Boolean);
+
+  console.log(chalk.blue.bold("\n  Conflict Helper\n"));
+  if (unmerged.length === 0 && markerFiles.length === 0) {
+    console.log(chalk.green("  ✓ No merge conflicts detected."));
+    console.log("");
+    return;
+  }
+  if (unmerged.length > 0) {
+    console.log(chalk.red("  Unmerged files:"));
+    for (const file of unmerged) console.log(`  - ${file}`);
+  }
+  if (markerFiles.length > 0) {
+    console.log(chalk.yellow("\n  Conflict markers:"));
+    for (const line of markerFiles.slice(0, 20)) console.log(`  - ${line}`);
+    if (markerFiles.length > 20) console.log(chalk.dim(`  ...${markerFiles.length - 20} more marker lines`));
+  }
+  console.log(chalk.dim("\n  Resolve each file, run git add <file>, then continue the merge/rebase/cherry-pick."));
 }
 
 async function gitBranch(cwd: string, flags: GitFlags): Promise<void> {
@@ -991,6 +1099,74 @@ async function gitUndo(cwd: string, flags: GitFlags): Promise<void> {
     console.log(chalk.dim("  stage   — unstage all changes"));
     console.log(chalk.dim("  changes — discard all uncommitted changes (--force required)"));
   }
+}
+
+async function detectMainBranch(cwd: string): Promise<string | null> {
+  for (const candidate of ["main", "master", "trunk", "develop"]) {
+    const result = await runCommand(`git rev-parse --verify ${candidate} 2>/dev/null`, cwd);
+    if (result.exitCode === 0) return candidate;
+    const remote = await runCommand(`git rev-parse --verify origin/${candidate} 2>/dev/null`, cwd);
+    if (remote.exitCode === 0) return `origin/${candidate}`;
+  }
+  return null;
+}
+
+async function gitUntrackedFiles(cwd: string): Promise<string[]> {
+  return (await gitStatusPaths(cwd, "??"));
+}
+
+async function gitStatusPaths(cwd: string, prefix?: string): Promise<string[]> {
+  const status = await runCommand("git status --porcelain", cwd);
+  return status.stdout
+    .split("\n")
+    .map((line) => line.trimEnd())
+    .filter((line) => line && (!prefix || line.startsWith(`${prefix} `)))
+    .map((line) => line.slice(3).trim())
+    .filter(Boolean);
+}
+
+function isSetuprInternalPath(file: string): boolean {
+  return file === ".setupr" || file.startsWith(".setupr/");
+}
+
+function inferCommitType(files: string[]): string {
+  if (files.every((file) => /\.(md|mdx|txt)$/i.test(file))) return "docs";
+  if (files.some((file) => /(^|\/)(test|tests|__tests__)\/|\.test\.|\.spec\./i.test(file))) return "test";
+  if (files.some((file) => /package(-lock)?\.json|pnpm-lock|yarn\.lock|bun\.lock/i.test(file))) return "build";
+  if (files.some((file) => /(^|\/)\.github\/|(^|\/)(Dockerfile|docker-compose|\.gitlab-ci|circleci)/i.test(file))) return "ci";
+  if (files.some((file) => /fix|bug|error|exception/i.test(file))) return "fix";
+  return "feat";
+}
+
+function inferCommitScope(files: string[]): string {
+  const first = files[0] || "";
+  const parts = first.split("/").filter(Boolean);
+  if (parts.length > 1 && ["src", "tests", "test", "packages", "apps"].includes(parts[0])) return sanitizeScope(parts[1]);
+  return sanitizeScope(parts[0]?.replace(/\.[^.]+$/, "") || "");
+}
+
+function sanitizeScope(value: string): string {
+  return value.toLowerCase().replace(/[^a-z0-9-]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 24);
+}
+
+function summarizeChangedFiles(files: string[]): string {
+  if (files.length === 1) return `update ${humanFile(files[0])}`;
+  const areas = [...new Set(files.map((file) => file.split("/")[0] || file))].slice(0, 3);
+  return `update ${areas.join(", ")}${files.length > 3 ? ` and ${files.length - 3} more` : ""}`;
+}
+
+function summarizeFilesByArea(files: string[]): string[] {
+  if (files.length === 0) return ["No file changes detected in the comparison range."];
+  const groups = new Map<string, number>();
+  for (const file of files) {
+    const area = file.includes("/") ? file.split("/")[0] : "root files";
+    groups.set(area, (groups.get(area) || 0) + 1);
+  }
+  return [...groups.entries()].map(([area, count]) => `Updated ${area} (${count} file${count === 1 ? "" : "s"})`);
+}
+
+function humanFile(file: string): string {
+  return file.split("/").pop()?.replace(/\.[^.]+$/, "").replace(/[-_]+/g, " ") || file;
 }
 
 function generateHooks(pm: string | null, language: string | null): Record<string, string> {

@@ -125,7 +125,11 @@ const HELP_NODES: Record<string, HelpNode> = {
       { name: "init", summary: "Initialize git and generate a stack-aware .gitignore." },
       { name: "hooks", summary: "Install or remove useful git hooks." },
       { name: "flow", summary: "Create and finish feature, hotfix, and release branches." },
+      { name: "commit-message", summary: "Suggest a deterministic commit message from changed files." },
       { name: "commit", summary: "Stage and commit changes with optional conventional messages." },
+      { name: "pr-description", summary: "Draft a PR body from branch diff signals." },
+      { name: "branch-check", summary: "Warn about main-branch work and branch state." },
+      { name: "conflicts", summary: "List unmerged files and conflict markers." },
       { name: "branch", summary: "Create, list, delete, or clean branches." },
       { name: "pr", summary: "Open or prepare pull request flows." },
       { name: "stash", summary: "Save, list, pop, or drop stashes." },
@@ -148,7 +152,7 @@ const HELP_NODES: Record<string, HelpNode> = {
     options: [
       { name: "--force", summary: "Skip ordinary confirmations where the git command supports it." },
     ],
-    examples: ["setup git status", "setup git flow feature ui-polish", "setup git commit --force", "setup git undo stage"],
+    examples: ["setupr git status", "setupr git commit-message", "setupr git pr-description", "setupr git conflicts"],
   },
   init: {
     name: "init",

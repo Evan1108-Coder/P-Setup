@@ -1,6 +1,7 @@
 import chalk from "chalk";
 import { scanProject } from "../../scanner/index.js";
 import { runCommand } from "../../executor/index.js";
+import { existsSync } from "fs";
 import { readFile, writeFile } from "fs/promises";
 import { join } from "path";
 import { initEnvFile, normalizeEnvKey, parseEnvKeys, parseEnvPairs } from "../../env/index.js";
@@ -55,7 +56,7 @@ export async function runNonTUICommand(
       await cmdPort(sub, cwd);
       break;
     case "deps":
-      await cmdDeps(cwd);
+      await cmdDeps(sub, cwd, flags);
       break;
     case "config":
       await cmdConfig(sub, cwd, flags);
@@ -173,6 +174,26 @@ export async function runNonTUICommand(
     case "scaffold": {
       const { cmdScaffold } = await import("./scaffold.js");
       await cmdScaffold(sub, cwd, { ...flags, args: flags.args || [] });
+      break;
+    }
+    case "analyze": {
+      const { cmdAnalyze } = await import("./code.js");
+      await cmdAnalyze(cwd);
+      break;
+    }
+    case "explain": {
+      const { cmdExplain } = await import("./code.js");
+      await cmdExplain(sub, cwd, { ...flags, args: flags.args || [] });
+      break;
+    }
+    case "refactor": {
+      const { cmdRefactor } = await import("./code.js");
+      await cmdRefactor(sub, cwd, { ...flags, args: flags.args || [] });
+      break;
+    }
+    case "todo": {
+      const { cmdTodo } = await import("./code.js");
+      await cmdTodo(cwd);
       break;
     }
     default:
@@ -573,7 +594,51 @@ async function cmdPort(port: string | undefined, cwd: string) {
   }
 }
 
-async function cmdDeps(cwd: string) {
+interface PackageJsonInfo {
+  dependencies?: Record<string, string>;
+  devDependencies?: Record<string, string>;
+  optionalDependencies?: Record<string, string>;
+  peerDependencies?: Record<string, string>;
+  license?: string | { type?: string };
+}
+
+interface LockPackageInfo {
+  name: string;
+  version?: string;
+  license?: string | { type?: string };
+  path: string;
+  dependencies: string[];
+}
+
+interface DependencySnapshot {
+  packageJson?: PackageJsonInfo;
+  lockfile?: any;
+  packages: LockPackageInfo[];
+}
+
+async function cmdDeps(sub: string | undefined, cwd: string, flags?: Flags) {
+  switch (sub) {
+    case undefined:
+    case "list":
+      return cmdDepsList(cwd);
+    case "audit":
+      return cmdDepsAudit(cwd);
+    case "why":
+      return cmdDepsWhy(cwd, flags?.args?.[0]);
+    case "licenses":
+      return cmdDepsLicenses(cwd);
+    default:
+      printPlainError(createSetuprError({
+        code: "UNKNOWN_SUBCOMMAND",
+        command: "deps",
+        subcommand: sub,
+        cwd,
+        details: ["Valid: list, audit, why <package>, licenses"],
+      }));
+  }
+}
+
+async function cmdDepsList(cwd: string) {
   const scan = await scanProject(cwd);
   const pm = scan.packageManager || "npm";
   console.log(chalk.blue(`Dependencies (${pm}):`));
@@ -583,6 +648,289 @@ async function cmdDeps(cwd: string) {
   } else {
     console.log(result.stdout || result.stderr);
   }
+}
+
+async function cmdDepsAudit(cwd: string): Promise<void> {
+  console.log(chalk.blue.bold("\n  Dependency Audit\n"));
+  const result = await runCommand("npm audit --json", cwd);
+  const audit = parseFirstJson(result.stdout) || parseFirstJson(result.stderr);
+
+  if (!audit) {
+    console.log(chalk.yellow("  Audit unavailable."));
+    if (!existsSync(join(cwd, "package-lock.json"))) {
+      console.log(chalk.dim("  No package-lock.json found; npm audit needs a lockfile."));
+    } else {
+      console.log(chalk.dim("  npm audit did not return JSON. This can happen offline or during registry errors."));
+    }
+    return;
+  }
+
+  const counts = auditCounts(audit);
+  const total = counts.total ?? Object.entries(counts)
+    .filter(([key]) => key !== "total")
+    .reduce((sum, [, value]) => sum + Number(value || 0), 0);
+
+  const color = total === 0 ? chalk.green : counts.critical || counts.high ? chalk.red : chalk.yellow;
+  console.log(`  Vulnerabilities: ${color(String(total))}`);
+  for (const severity of ["critical", "high", "moderate", "low", "info"] as const) {
+    console.log(`  ${severity.padEnd(8)} ${counts[severity] || 0}`);
+  }
+
+  const vulnerablePackages = auditVulnerablePackages(audit);
+  if (vulnerablePackages.length > 0) {
+    console.log("");
+    console.log(chalk.white("  Packages:"));
+    for (const item of vulnerablePackages.slice(0, 10)) {
+      console.log(`  - ${item.name} (${item.severity}${item.fixAvailable ? ", fix available" : ""})`);
+    }
+    if (vulnerablePackages.length > 10) {
+      console.log(chalk.dim(`  ...and ${vulnerablePackages.length - 10} more`));
+    }
+  } else if (total === 0) {
+    console.log(chalk.green("\n  No known vulnerabilities reported."));
+  }
+}
+
+async function cmdDepsWhy(cwd: string, packageName: string | undefined): Promise<void> {
+  if (!packageName) {
+    printPlainError(createSetuprError({
+      code: "UNKNOWN_SUBCOMMAND",
+      command: "deps",
+      subcommand: "why",
+      cwd,
+      details: ["Usage: setupr deps why <package>"],
+    }));
+    return;
+  }
+
+  const snapshot = await loadDependencySnapshot(cwd);
+  const direct = directDependencyKinds(snapshot.packageJson, packageName);
+  const locked = snapshot.packages.filter((pkg) => pkg.name === packageName).sort(compareLockPackages);
+  const parents = snapshot.packages
+    .filter((pkg) => pkg.dependencies.includes(packageName) && pkg.name !== packageName)
+    .map((pkg) => `${pkg.name}${pkg.version ? `@${pkg.version}` : ""}`)
+    .sort();
+
+  console.log(chalk.blue.bold(`\n  Why ${packageName}?\n`));
+
+  if (direct.length > 0) {
+    console.log(chalk.green("  Direct dependency"));
+    for (const item of direct) {
+      console.log(`  - ${item.kind}: ${item.range}`);
+    }
+  } else {
+    console.log(chalk.dim("  Not declared directly in package.json."));
+  }
+
+  if (locked.length > 0) {
+    console.log("");
+    console.log(chalk.white("  Lockfile entries:"));
+    for (const pkg of locked) {
+      console.log(`  - ${pkg.name}${pkg.version ? `@${pkg.version}` : ""} (${pkg.path || "root"})`);
+    }
+  } else if (!snapshot.lockfile) {
+    console.log(chalk.yellow("\n  No package-lock.json found; transitive signal is limited."));
+  } else {
+    console.log(chalk.yellow("\n  Not found in package-lock.json."));
+  }
+
+  if (parents.length > 0) {
+    console.log("");
+    console.log(chalk.white("  Required by:"));
+    for (const parent of [...new Set(parents)]) {
+      console.log(`  - ${parent}`);
+    }
+  } else if (direct.length === 0 && locked.length > 0) {
+    console.log(chalk.dim("\n  No parent edge was recorded in package-lock.json."));
+  }
+}
+
+async function cmdDepsLicenses(cwd: string): Promise<void> {
+  const snapshot = await loadDependencySnapshot(cwd);
+  console.log(chalk.blue.bold("\n  Dependency Licenses\n"));
+
+  if (!snapshot.lockfile && snapshot.packages.length === 0) {
+    console.log(chalk.yellow("  No package-lock.json found; license signal is limited."));
+  }
+
+  const restricted = snapshot.packages
+    .map((pkg) => ({ ...pkg, licenseText: licenseToString(pkg.license) }))
+    .filter((pkg) => pkg.path !== "" && pkg.licenseText && isRestrictedLicense(pkg.licenseText))
+    .sort(compareLockPackages);
+
+  const rootLicense = licenseToString(snapshot.packageJson?.license);
+  if (rootLicense) {
+    console.log(`  Project license: ${rootLicense}`);
+  }
+
+  if (restricted.length === 0) {
+    console.log(chalk.green("  No GPL/AGPL/LGPL licenses found in available metadata."));
+    return;
+  }
+
+  console.log(chalk.yellow(`  Restricted/copyleft licenses: ${restricted.length}`));
+  for (const pkg of restricted) {
+    console.log(`  - ${pkg.name}${pkg.version ? `@${pkg.version}` : ""}: ${pkg.licenseText}`);
+  }
+}
+
+async function loadDependencySnapshot(cwd: string): Promise<DependencySnapshot> {
+  const packageJson = await readJsonFile<PackageJsonInfo>(join(cwd, "package.json"));
+  const lockfile = await readJsonFile<any>(join(cwd, "package-lock.json"));
+  return {
+    packageJson,
+    lockfile,
+    packages: collectLockPackages(lockfile),
+  };
+}
+
+async function readJsonFile<T>(path: string): Promise<T | undefined> {
+  try {
+    return JSON.parse(await readFile(path, "utf-8")) as T;
+  } catch {
+    return undefined;
+  }
+}
+
+function collectLockPackages(lockfile: any): LockPackageInfo[] {
+  if (!lockfile) return [];
+
+  if (lockfile.packages && typeof lockfile.packages === "object") {
+    return Object.entries(lockfile.packages)
+      .map(([path, value]) => lockPackageFromPackagesEntry(path, value))
+      .filter((pkg): pkg is LockPackageInfo => Boolean(pkg))
+      .sort(compareLockPackages);
+  }
+
+  if (lockfile.dependencies && typeof lockfile.dependencies === "object") {
+    const packages: LockPackageInfo[] = [];
+    collectLegacyLockPackages(lockfile.dependencies, packages);
+    return packages.sort(compareLockPackages);
+  }
+
+  return [];
+}
+
+function lockPackageFromPackagesEntry(path: string, value: unknown): LockPackageInfo | undefined {
+  if (!value || typeof value !== "object") return undefined;
+  const entry = value as Record<string, any>;
+  const name = path === "" ? entry.name : nameFromNodeModulesPath(path);
+  if (!name) return undefined;
+  const dependencies = entry.dependencies && typeof entry.dependencies === "object" ? Object.keys(entry.dependencies) : [];
+  return {
+    name,
+    version: typeof entry.version === "string" ? entry.version : undefined,
+    license: entry.license,
+    path,
+    dependencies: dependencies.sort(),
+  };
+}
+
+function collectLegacyLockPackages(entries: Record<string, any>, packages: LockPackageInfo[], parentPath = "node_modules"): void {
+  for (const name of Object.keys(entries).sort()) {
+    const entry = entries[name];
+    if (!entry || typeof entry !== "object") continue;
+    const dependencies = entry.requires && typeof entry.requires === "object" ? Object.keys(entry.requires).sort() : [];
+    packages.push({
+      name,
+      version: typeof entry.version === "string" ? entry.version : undefined,
+      license: entry.license,
+      path: `${parentPath}/${name}`,
+      dependencies,
+    });
+    if (entry.dependencies && typeof entry.dependencies === "object") {
+      collectLegacyLockPackages(entry.dependencies, packages, `${parentPath}/${name}/node_modules`);
+    }
+  }
+}
+
+function nameFromNodeModulesPath(path: string): string | undefined {
+  const marker = "node_modules/";
+  const index = path.lastIndexOf(marker);
+  if (index === -1) return undefined;
+  return path.slice(index + marker.length);
+}
+
+function directDependencyKinds(packageJson: PackageJsonInfo | undefined, packageName: string): Array<{ kind: string; range: string }> {
+  if (!packageJson) return [];
+  const groups: Array<[keyof PackageJsonInfo, string]> = [
+    ["dependencies", "dependencies"],
+    ["devDependencies", "devDependencies"],
+    ["optionalDependencies", "optionalDependencies"],
+    ["peerDependencies", "peerDependencies"],
+  ];
+  return groups.flatMap(([key, label]) => {
+    const deps = packageJson[key];
+    if (!deps || typeof deps !== "object" || Array.isArray(deps)) return [];
+    const range = (deps as Record<string, string>)[packageName];
+    return range ? [{ kind: label, range }] : [];
+  });
+}
+
+function parseFirstJson(text: string): any | undefined {
+  const trimmed = text.trim();
+  if (!trimmed) return undefined;
+  try {
+    return JSON.parse(trimmed);
+  } catch {
+    const start = trimmed.indexOf("{");
+    const end = trimmed.lastIndexOf("}");
+    if (start === -1 || end <= start) return undefined;
+    try {
+      return JSON.parse(trimmed.slice(start, end + 1));
+    } catch {
+      return undefined;
+    }
+  }
+}
+
+function auditCounts(audit: any): Record<"critical" | "high" | "moderate" | "low" | "info" | "total", number> {
+  const metadataCounts = audit?.metadata?.vulnerabilities;
+  const base = { critical: 0, high: 0, moderate: 0, low: 0, info: 0, total: 0 };
+  if (metadataCounts && typeof metadataCounts === "object") {
+    const counts = { ...base, ...metadataCounts };
+    counts.total = Number(counts.total || counts.critical + counts.high + counts.moderate + counts.low + counts.info);
+    return counts;
+  }
+
+  const packages = auditVulnerablePackages(audit);
+  for (const item of packages) {
+    if (item.severity in base) base[item.severity as keyof typeof base]++;
+  }
+  base.total = packages.length;
+  return base;
+}
+
+function auditVulnerablePackages(audit: any): Array<{ name: string; severity: string; fixAvailable: boolean }> {
+  const vulnerabilities = audit?.vulnerabilities || audit?.advisories || {};
+  if (!vulnerabilities || typeof vulnerabilities !== "object") return [];
+  return Object.entries(vulnerabilities)
+    .map(([name, value]) => {
+      const entry = value as Record<string, any>;
+      return {
+        name,
+        severity: String(entry.severity || "unknown"),
+        fixAvailable: Boolean(entry.fixAvailable),
+      };
+    })
+    .sort((a, b) => a.name.localeCompare(b.name));
+}
+
+function licenseToString(license: unknown): string {
+  if (typeof license === "string") return license;
+  if (license && typeof license === "object" && "type" in license) {
+    const type = (license as { type?: unknown }).type;
+    return typeof type === "string" ? type : "";
+  }
+  return "";
+}
+
+function isRestrictedLicense(license: string): boolean {
+  return /\b(A?GPL|LGPL)(?:[-\s]?|\b)/i.test(license);
+}
+
+function compareLockPackages(a: LockPackageInfo, b: LockPackageInfo): number {
+  return a.name.localeCompare(b.name) || (a.version || "").localeCompare(b.version || "") || a.path.localeCompare(b.path);
 }
 
 async function cmdConfig(sub: string | undefined, cwd: string, flags?: Flags) {
