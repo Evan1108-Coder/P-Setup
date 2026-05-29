@@ -3,7 +3,7 @@ import { mkdir, mkdtemp, rm, writeFile } from "fs/promises";
 import { join } from "path";
 import { tmpdir } from "os";
 import { spawnSync } from "child_process";
-import { collectDashboardStatus } from "../src/status/collector.js";
+import { collectDashboardStatus, createDashboardFallbackStatus } from "../src/status/collector.js";
 import { appendHistoryEvent } from "../src/state/project.js";
 
 describe("dashboard/status collector", () => {
@@ -82,5 +82,13 @@ describe("dashboard/status collector", () => {
     expect(status.git.branch).toBe("main");
     expect(status.git.dirtyFiles).toBeGreaterThan(0);
     expect(status.git.recent[0]).toContain("feat: initial");
+  });
+
+  it("creates a bounded fallback dashboard status", () => {
+    const status = createDashboardFallbackStatus(tempDir, "timed out");
+
+    expect(status.health.label).toBe("warning");
+    expect(status.scanError).toBe("timed out");
+    expect(status.commands.map((command) => command.name)).toContain("setup");
   });
 });

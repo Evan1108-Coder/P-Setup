@@ -3,6 +3,7 @@ import { render } from "ink";
 import { App, type TUICommand } from "../tui/App.js";
 import { createAppStore } from "../state/store.js";
 import { scanProject } from "../scanner/index.js";
+import { collectDashboardStatus, createDashboardFallbackStatus, type DashboardStatus } from "../status/collector.js";
 
 interface LaunchOptions {
   cleanMode?: "deps" | "share" | "all";
@@ -17,10 +18,13 @@ export async function launchTUI(
   process.stdout.write("\x1B[0m");
 
   const store = createAppStore(cwd);
+  let dashboardStatus: DashboardStatus | undefined;
 
   if (command !== "setup" && command !== "dashboard" && command !== "status") {
     const scan = await scanProject(cwd);
     store.getState().setScan(scan);
+  } else if (command === "dashboard" || command === "status") {
+    dashboardStatus = await collectDashboardStatusForTui(cwd);
   }
 
   const restoreStdout = stripScrollbackClear();
@@ -32,6 +36,7 @@ export async function launchTUI(
       store,
       cleanMode: options?.cleanMode || "deps",
       force: options?.force || false,
+      dashboardStatus,
     }),
     { exitOnCtrlC: true }
   );
@@ -41,6 +46,13 @@ export async function launchTUI(
   } finally {
     restoreStdout();
   }
+}
+
+async function collectDashboardStatusForTui(cwd: string): Promise<DashboardStatus> {
+  const timeout = new Promise<DashboardStatus>((resolve) => {
+    setTimeout(() => resolve(createDashboardFallbackStatus(cwd, "Status probes timed out before TUI render.")), 2500);
+  });
+  return Promise.race([collectDashboardStatus(cwd), timeout]);
 }
 
 function stripScrollbackClear(): () => void {

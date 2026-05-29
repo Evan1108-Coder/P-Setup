@@ -6,6 +6,7 @@ import { UpdateLayout } from "./layouts/UpdateLayout.js";
 import { CleanLayout } from "./layouts/CleanLayout.js";
 import { AuthLayout } from "./layouts/AuthLayout.js";
 import { DashboardLayout } from "./layouts/DashboardLayout.js";
+import type { DashboardStatus } from "../status/collector.js";
 import type { ScanResult } from "../scanner/index.js";
 import { scanProject } from "../scanner/index.js";
 import { collectContext } from "../context/collector.js";
@@ -35,9 +36,10 @@ interface AppProps {
   store: AppStore;
   cleanMode?: "deps" | "share" | "all";
   force?: boolean;
+  dashboardStatus?: DashboardStatus;
 }
 
-export function App({ command, cwd, store, cleanMode = "deps", force = false }: AppProps) {
+export function App({ command, cwd, store, cleanMode = "deps", force = false, dashboardStatus }: AppProps) {
   useEffect(() => {
     if (command === "setup") {
       runSetupFlow(cwd, store, { force });
@@ -51,7 +53,7 @@ export function App({ command, cwd, store, cleanMode = "deps", force = false }: 
       return <SetupLayout store={store} />;
     case "dashboard":
     case "status":
-      return <DashboardLayout cwd={cwd} />;
+      return <DashboardLayout cwd={cwd} initialStatus={dashboardStatus} />;
     case "doctor":
       return scan ? <DoctorLayout scan={scan} cwd={cwd} /> : <SetupLayout store={store} />;
     case "start":

@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { Box, Text, useApp } from "ink";
-import { collectDashboardStatus, type DashboardStatus } from "../../status/collector.js";
+import { collectDashboardStatus, createDashboardFallbackStatus, type DashboardStatus } from "../../status/collector.js";
 import { Panel } from "../components/Panel.js";
 import { StatusBar } from "../components/StatusBar.js";
 import { Spinner } from "../components/Spinner.js";
@@ -10,12 +10,13 @@ import { colors, icons } from "../theme.js";
 
 interface DashboardLayoutProps {
   cwd: string;
+  initialStatus?: DashboardStatus;
 }
 
-export function DashboardLayout({ cwd }: DashboardLayoutProps) {
+export function DashboardLayout({ cwd, initialStatus }: DashboardLayoutProps) {
   const { exit } = useApp();
   const terminal = useTerminalSize();
-  const [status, setStatus] = useState<DashboardStatus | null>(null);
+  const [status, setStatus] = useState<DashboardStatus | null>(initialStatus || null);
   const [error, setError] = useState<string | null>(null);
   const stacked = terminal.width < 104;
   const headerHeight = 1;
@@ -31,17 +32,28 @@ export function DashboardLayout({ cwd }: DashboardLayoutProps) {
 
   useEffect(() => {
     let alive = true;
+    if (initialStatus) return () => {
+      alive = false;
+    };
+    const timer = setTimeout(() => {
+      if (alive) {
+        setStatus(createDashboardFallbackStatus(cwd, "Status probes timed out in the interactive dashboard."));
+      }
+    }, 2500);
     collectDashboardStatus(cwd)
       .then((next) => {
+        clearTimeout(timer);
         if (alive) setStatus(next);
       })
       .catch((err) => {
+        clearTimeout(timer);
         if (alive) setError(err instanceof Error ? err.message : String(err));
       });
     return () => {
       alive = false;
+      clearTimeout(timer);
     };
-  }, [cwd]);
+  }, [cwd, initialStatus]);
 
   return (
     <Box flexDirection="column" width={terminal.width} height={terminal.height}>
@@ -193,17 +205,18 @@ function ActionsPanel({ status }: { status: DashboardStatus }) {
   return (
     <Box flexDirection="column">
       {commands.slice(0, 5).map((command, index) => (
-        <Text key={command.name} wrap="truncate">
-          <Text color={colors.accent}>{index + 1}</Text>
-          <Text color={colors.text}> {command.name.padEnd(8)}</Text>
-          <Text color={colors.textDim}>{command.summary}</Text>
-        </Text>
+        <Text key={command.name} color={colors.text}>{`${index + 1} ${command.name}`.padEnd(70)}</Text>
       ))}
       {status.history.slice(-3).map((event) => (
-        <Text key={`${event.timestamp}-${event.type}`} color={colors.textDim} wrap="truncate">{formatTime(event.timestamp)} {event.message || event.type}</Text>
+        <Text key={`${event.timestamp}-${event.type}`} color={colors.textDim}>{shortLine(`${formatTime(event.timestamp)} ${event.message || event.type}`).padEnd(70)}</Text>
       ))}
     </Box>
   );
+}
+
+function shortLine(value: string, max = 70): string {
+  const clean = value.replace(/\s+/g, " ").trim();
+  return clean.length <= max ? clean : `${clean.slice(0, Math.max(0, max - 1))}…`;
 }
 
 function buildFocusItems(width: number, height: number, leftWidth: number, rightWidth: number, stacked: boolean): FocusItem[] {

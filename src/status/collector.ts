@@ -111,17 +111,50 @@ export async function collectDashboardStatus(cwd: string): Promise<DashboardStat
   };
 }
 
+export function createDashboardFallbackStatus(cwd: string, reason: string): DashboardStatus {
+  const projectName = cwd.split("/").filter(Boolean).pop() || "project";
+  return {
+    cwd,
+    projectName,
+    collectedAt: Date.now(),
+    scan: null,
+    hasProject: false,
+    scanError: reason,
+    health: {
+      score: 64,
+      label: "warning",
+      checks: [
+        { label: "Project", status: "warning", detail: "Status collection timed out" },
+        { label: "Git", status: "warning", detail: "Run setupr status --plain for details" },
+        { label: "Env", status: "warning", detail: "Not collected" },
+        { label: "Dependencies", status: "warning", detail: "Not collected" },
+        { label: "Processes", status: "warning", detail: "Not collected" },
+      ],
+    },
+    git: { isRepo: false, dirtyFiles: 0, stagedFiles: 0, untrackedFiles: 0, recent: [] },
+    env: { hasExample: false, hasEnv: false, required: 0, defined: 0, missing: [], extra: [] },
+    dependencies: { packageManager: null, prod: 0, dev: 0, lockfilePresent: false },
+    processes: { managed: 0, running: 0, crashed: 0, entries: [] },
+    ai: { activeModel: getDefaultModel().id, availableModels: getAvailableModels().length },
+    history: [],
+    logs: [],
+    commands: visibleCommands()
+      .filter((command) => command.name !== "help" && command.name !== "dashboard")
+      .map((command) => ({ name: command.name, summary: command.summary })),
+  };
+}
+
 async function collectGitStatus(cwd: string): Promise<DashboardStatus["git"]> {
-  const isRepo = (await runCommand("git rev-parse --is-inside-work-tree", cwd)).stdout.trim() === "true";
+  const isRepo = (await runStatusCommand("git rev-parse --is-inside-work-tree", cwd)).stdout.trim() === "true";
   if (!isRepo) {
     return { isRepo: false, dirtyFiles: 0, stagedFiles: 0, untrackedFiles: 0, recent: [] };
   }
 
   const [branch, remote, status, recent] = await Promise.all([
-    runCommand("git branch --show-current", cwd),
-    runCommand("git remote get-url origin", cwd),
-    runCommand("git status --porcelain=v1 --branch", cwd),
-    runCommand("git log --oneline -5", cwd),
+    runStatusCommand("git branch --show-current", cwd),
+    runStatusCommand("git remote get-url origin", cwd),
+    runStatusCommand("git status --porcelain=v1 --branch", cwd),
+    runStatusCommand("git log --oneline -5", cwd),
   ]);
 
   let dirtyFiles = 0;
@@ -157,6 +190,16 @@ async function collectGitStatus(cwd: string): Promise<DashboardStatus["git"]> {
     behind,
     recent: recent.stdout.split("\n").filter(Boolean).slice(0, 5),
   };
+}
+
+async function runStatusCommand(command: string, cwd: string) {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 1500);
+  try {
+    return await runCommand(command, cwd, undefined, controller.signal);
+  } finally {
+    clearTimeout(timeout);
+  }
 }
 
 async function collectEnvStatus(cwd: string): Promise<DashboardStatus["env"]> {
