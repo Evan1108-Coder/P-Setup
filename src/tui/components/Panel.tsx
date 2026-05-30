@@ -49,7 +49,7 @@ export function Panel({
           {title}
         </Text>
       </Box>
-      <Box flexDirection="column" width="100%" minWidth={0} flexShrink={1} overflow="hidden">
+      <Box flexDirection="column" width="100%" minWidth={0} flexGrow={1} flexShrink={1} overflow="hidden">
         {children}
       </Box>
     </Box>

@@ -39,7 +39,7 @@ export function ChatInput({ active, focusState, onSubmit, placeholder = "Ask any
       borderColor={focused ? colors.borderActive : colors.border}
       paddingX={1}
       width={boxWidth}
-      flexShrink={1}
+      flexShrink={0}
     >
       <Text color={colors.primary}>❯ </Text>
       <BoundedTextInput

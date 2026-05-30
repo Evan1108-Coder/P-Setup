@@ -343,7 +343,19 @@ async function gitConflicts(cwd: string): Promise<void> {
   if (!await requireGitRepo(cwd, "conflicts")) return;
 
   const unmerged = (await runCommand("git diff --name-only --diff-filter=U", cwd)).stdout.trim().split("\n").filter(Boolean);
-  const markerFiles = (await runCommand("git grep --untracked -n -e \"^<<<<<<<\" -e \"^=======\" -e \"^>>>>>>>\" -- . 2>/dev/null || true", cwd)).stdout.trim().split("\n").filter(Boolean);
+  const markerFiles = (await runCommand([
+    "git grep --untracked -n",
+    "-e \"^<<<<<<<\" -e \"^=======\" -e \"^>>>>>>>\"",
+    "-- .",
+    "\":(exclude)node_modules/**\"",
+    "\":(exclude).git/**\"",
+    "\":(exclude).setupr/**\"",
+    "\":(exclude)dist/**\"",
+    "\":(exclude)build/**\"",
+    "\":(exclude)coverage/**\"",
+    "\":(exclude).next/**\"",
+    "2>/dev/null || true",
+  ].join(" "), cwd)).stdout.trim().split("\n").filter(Boolean);
 
   console.log(chalk.blue.bold("\n  Conflict Helper\n"));
   if (unmerged.length === 0 && markerFiles.length === 0) {

@@ -131,18 +131,48 @@ async function lintFix(cwd: string, _flags: LintFlags): Promise<void> {
   if (scan.scripts["lint:fix"]) {
     const result = await runCommand(`${pm} run lint:fix`, cwd);
     if (result.exitCode === 0) console.log(chalk.green("✓ Lint fix applied"));
-    else console.log(result.stderr);
+    else reportLintFixFailure(cwd, result.stderr || result.stdout || "lint:fix failed");
   } else if (scan.scripts.lint) {
+    if (!canForwardFixFlag(scan.scripts.lint)) {
+      printPlainError(createSetuprError({
+        code: "MISSING_SCRIPT",
+        command: "lint",
+        subcommand: "fix",
+        cwd,
+        details: [
+          "No lint:fix script exists.",
+          `The lint script is '${scan.scripts.lint}', and Setupr cannot safely infer a --fix mode for it.`,
+          "Add a lint:fix script or use an ESLint/Biome/Prettier command.",
+        ],
+        canContinue: true,
+      }));
+      return;
+    }
     const result = await runCommand(`${pm} run lint -- --fix`, cwd);
     if (result.exitCode === 0) console.log(chalk.green("✓ Lint fix applied"));
-    else console.log(result.stderr);
+    else reportLintFixFailure(cwd, result.stderr || result.stdout || "lint -- --fix failed");
   } else if (existsSync(join(cwd, "biome.json"))) {
     const result = await runCommand("npx @biomejs/biome check --write .", cwd);
     if (result.exitCode === 0) console.log(chalk.green("✓ Biome fix applied"));
-    else console.log(result.stderr);
+    else reportLintFixFailure(cwd, result.stderr || result.stdout || "Biome fix failed");
   } else {
     const result = await runCommand("npx eslint . --fix --ext .ts,.tsx,.js,.jsx", cwd);
     if (result.exitCode === 0) console.log(chalk.green("✓ ESLint fix applied"));
-    else console.log(result.stderr);
+    else reportLintFixFailure(cwd, result.stderr || result.stdout || "ESLint fix failed");
   }
+}
+
+function canForwardFixFlag(script: string): boolean {
+  return /\b(eslint|biome|prettier|standard|xo)\b/.test(script) && !/\bnode\b/.test(script);
+}
+
+function reportLintFixFailure(cwd: string, detail: string): void {
+  printPlainError(createSetuprError({
+    code: "COMMAND_FAILED",
+    command: "lint",
+    subcommand: "fix",
+    cwd,
+    details: [detail.trim().split(/\r?\n/).slice(0, 8).join("\n")],
+    canContinue: true,
+  }));
 }
