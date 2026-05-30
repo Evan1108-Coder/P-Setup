@@ -40,6 +40,14 @@ printf '\033[?1000l\033[?1002l\033[?1003l\033[?1006l'
 
 Modern Terminal.app, iTerm2, and Ghostty all support the mouse protocol Setupr uses.
 
+Setupr also enables bracketed paste while the TUI is active so pasted multi-line env values or chat text are handled as text instead of accidental commands. If a terminal is left in paste mode after a hard crash, reset it with:
+
+```bash
+printf '\033[?2004l'
+```
+
+Inside focused input boxes, Setupr supports common terminal editing shortcuts where the terminal sends compatible sequences: `Ctrl+A/E`, `Ctrl+U/K`, `Ctrl+W`, Option/Alt word movement, and Option/Alt delete. Some terminals let users remap Option-key behavior; if a shortcut inserts characters instead of editing text, check the terminal keyboard profile.
+
 ### AI features not working
 
 **Cause**: Missing API key.

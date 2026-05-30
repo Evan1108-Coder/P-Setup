@@ -42,6 +42,11 @@ const cli = meow(
     build       Run build command
     deploy      Run deploy scripts
     open        Open in browser/IDE/repo
+    fix         Preview or run grouped safe fixes
+    release     Release readiness checks and npm packaging dry-runs
+    perf        Measure Setupr scan/context/status performance
+    github      Show GitHub repo, Actions, PR, and issue targets
+    registry    Look up npm/PyPI/crates package info
 
     git         Git workflows (init, hooks, flow, commit, branch, pr, stash, rebase, tag, release, status, log, sync, clean)
     init        Scaffold a new project (node, python, rust, go, templates)
@@ -70,10 +75,12 @@ const cli = meow(
 
   Examples
     $ setup
-    $ setup chat how do I start this app?
     $ setup doctor
     $ setup auth login
     $ setup env smart
+    $ setup chat how do I start this app?
+    $ setup release publish-check
+    $ setup perf startup
     $ setup git flow feature my-feature
     $ setup init --template react-app
     $ setup ci github

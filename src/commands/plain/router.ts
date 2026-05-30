@@ -109,6 +109,32 @@ export async function runNonTUICommand(
       await cmdGit(sub, cwd, { ...flags, args: flags.args || [] });
       break;
     }
+    case "fix": {
+      const { cmdFix } = await import("./product.js");
+      await cmdFix(sub, cwd, { ...flags, args: flags.args || [] });
+      break;
+    }
+    case "release": {
+      const { cmdRelease } = await import("./product.js");
+      await cmdRelease(sub, cwd, { ...flags, args: flags.args || [] });
+      break;
+    }
+    case "perf": {
+      const { cmdPerf } = await import("./product.js");
+      await cmdPerf(sub, cwd, { ...flags, args: flags.args || [] });
+      break;
+    }
+    case "github":
+    case "gh": {
+      const { cmdGithub } = await import("./product.js");
+      await cmdGithub(sub, cwd, { ...flags, args: flags.args || [] });
+      break;
+    }
+    case "registry": {
+      const { cmdRegistry } = await import("./product.js");
+      await cmdRegistry(sub, cwd, { ...flags, args: flags.args || [] });
+      break;
+    }
     case "init": {
       const { cmdInit } = await import("./init.js");
       await cmdInit(cwd, { ...flags, args: sub ? [sub, ...(flags.args || [])] : flags.args || [] });

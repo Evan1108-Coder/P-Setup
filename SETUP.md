@@ -36,12 +36,13 @@ Use the built-in help tree when you are not sure which workflow to run:
 
 ```bash
 setup help
+setup help chat
 setup help git
 setup help docker
 setup workspace --help
 ```
 
-The rich help output lists the full command surface, including setup, auth, env, git, CI, Docker, secrets, templates, workspace, health, test, security, share, plugin, lint, format, and scaffold commands.
+The rich help output lists the full command surface, including setup, chat, auth, env, git, CI, Docker, secrets, templates, workspace, health, test, security, fix, release, perf, GitHub, registry, share, plugin, lint, format, and scaffold commands.
 
 ### Development Setup
 
@@ -94,6 +95,16 @@ setup auth models
 
 Without an API key, Setupr works fully — it just uses pattern matching and heuristics instead of AI for step planning and chat responses.
 
+You can ask the project-aware director from plain mode:
+
+```bash
+setupr chat "how do I start this app?"
+setupr chat "what failed last time?"
+setupr chat "switch model to openai/gpt-4.1-mini"
+```
+
+The chat command loads scan results, docs, env schema, git state, recent Setupr history, and workflow checkpoints. It masks secrets before recording or sending context to providers.
+
 ## Agent Runtime
 
 Setupr reads project context before planning: README/setup docs, `.env.example`, package scripts, Docker/Compose files, CI files, scanner output, and a bounded file tree. This context is cached in `.setupr/cache`.
@@ -119,6 +130,29 @@ setupr security deep --report .setupr/security-report.md
 `setupr test` chooses project-native commands from package scripts, Python, Rust, Go, and common build/lint/typecheck names. `setupr test create <file>` previews a starter test file and writes it only with `--yes` or `--force`.
 
 `setupr security` runs defensive checks for likely committed secrets, risky env naming, dependency lockfile/version problems, Docker/CI risks, dangerous code primitives, route/auth smells, and optional local HTTP headers. Reports are saved under `.setupr/`; dashboard/status reads the latest report summary.
+
+## Release And Project Control
+
+Before publishing Setupr itself or any npm project, use:
+
+```bash
+setupr release check
+setupr release publish-check
+```
+
+For grouped repair flows:
+
+```bash
+setupr fix all       # preview
+setupr fix all --yes # execute the displayed safe commands
+```
+
+For performance work:
+
+```bash
+setupr perf startup
+setupr perf scan --json
+```
 
 ## CI/CD Usage
 

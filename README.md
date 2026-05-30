@@ -52,6 +52,7 @@ setupr setup --plain
 
 | Command | Description |
 |---------|-------------|
+| `chat <question>` | Ask the AI director about the current project, plan, errors, env, git, or commands |
 | `env [init\|check\|sync\|smart]` | Manage .env files |
 | `ps` | List Setupr-managed processes |
 | `stop [target]` | Stop one or all managed processes |
@@ -71,6 +72,11 @@ setupr setup --plain
 | `logs [target]` | Show managed process logs, falling back to package-manager logs |
 | `test [run\|quick\|full\|ci\|smoke\|unit\|integration\|e2e\|watch\|coverage\|changed\|file\|failed\|doctor\|list\|report\|clean\|create\|generate\|fix\|security]` | Run verification suites, smoke checks, reports, and test scaffolding |
 | `security [scan\|quick\|deep\|deps\|secrets\|env\|docker\|ci\|code\|routes\|auth\|headers\|doctor\|report\|baseline\|ignore\|fix\|watch\|test]` | Run defensive security scans, baselines, ignores, and safe fixes |
+| `fix [doctor\|env\|lint\|format\|security\|all]` | Preview or run grouped safe fixes |
+| `release [check\|publish-check\|notes\|version]` | Release readiness checks, package dry-runs, notes, and version summaries |
+| `perf [startup\|scan\|context\|status]` | Measure Setupr scan/context/status performance |
+| `github [status\|ci\|pr\|issue]` | Show GitHub repository, Actions, PR, and issue targets |
+| `registry <npm\|pypi\|crates> <package>` | Look up package registry information |
 | `build` | Detect and run build command |
 | `deploy` | Run deploy scripts |
 | `open [repo\|ide]` | Open in browser/IDE/repo |
@@ -194,6 +200,17 @@ Setupr's AI layer is now a director runtime, not only a one-shot planner:
 
 AI output is not treated as unrestricted shell text. The director proposes structured actions, then Setupr's executor and safety policy decide whether the action is allowed, needs confirmation, or must be blocked.
 
+You can also use the director without opening the setup TUI:
+
+```bash
+setupr chat "how do I start this app?"
+setupr chat "what failed last time?"
+setupr chat "switch model to moonshot-v1-128k"
+setupr chat "what env vars still need real values?"
+```
+
+`setupr chat` reads the same bounded project context as setup: scan results, cached docs, env schema, git state, recent Setupr history, and saved checkpoints. It uses pattern/cached answers when possible and only calls a live model for novel questions when a provider key is configured.
+
 ### Agent-Guided TUI Flow
 
 The `setup` TUI is an agent workspace, not just a log viewer:
@@ -255,6 +272,33 @@ setupr security headers --url http://localhost:3000
 `test clean`, `test create`, and `security fix` are guarded writes: they preview by default and require `--yes` or `--force` before changing files. Security scans are defensive static checks only. External URL header checks require `--force`; localhost URLs are allowed directly. Findings can be accepted with `setupr security baseline` or ignored individually with `setupr security ignore <finding-id>`.
 
 Verification reports live in `.setupr/test-runs.json`; security reports live in `.setupr/security-runs.json`. The dashboard and `setupr status --plain` summarize the latest test and security state.
+
+### Project Control Commands
+
+These commands strengthen npm-release and day-to-day project control workflows:
+
+```bash
+# Preview grouped safe fixes; add --yes to run the displayed commands
+setupr fix all
+setupr fix all --yes
+
+# Check release readiness and package contents
+setupr release check
+setupr release publish-check
+
+# Measure Setupr scan/context/status performance
+setupr perf startup
+
+# Show GitHub project targets from the git remote
+setupr github status
+
+# Look up package registry information
+setupr registry npm react
+setupr registry pypi fastapi
+setupr registry crates serde
+```
+
+`fix` previews by default. `release publish-check` runs `npm pack --dry-run` so the npm package contents can be inspected before publishing. `perf` is useful when changing scanner, context, dashboard, or AI-cache code.
 
 ### Safety Policy
 
@@ -403,11 +447,16 @@ Project-level config via `.setupr.json`:
 - **Arrow keys**: Move between neighboring panels in the dashboard
 - **Tab / Shift+Tab**: Move to the next or previous focusable panel
 - **Mouse click**: Focus a panel in terminals that support SGR mouse events
+- **Mouse click inside focused input**: Move the text cursor where the terminal reports coordinates accurately
+- **Option/Alt+Arrow**: Move by word where the terminal sends a compatible sequence
+- **Option/Alt+Delete or Ctrl+W**: Delete the previous word
+- **Ctrl+A / Ctrl+E**: Jump to start/end of input
+- **Ctrl+U / Ctrl+K**: Clear before/after cursor
 - **Enter**: Confirm / submit focused inputs
 - **Esc**: Leave or skip the active input when supported
 - **q**: Quit when focus is not inside an input
 
-The TUI runs in the terminal alternate screen, so exiting returns to the original shell history instead of leaving the dashboard printed in the scrollback. It does not set a background color; Terminal, iTerm2, Ghostty, and other terminal profiles keep control of their own theme/background. Panels are drawn with Unicode box-drawing characters because terminal UIs render in character cells rather than graphical window primitives.
+The TUI runs in the terminal alternate screen, so exiting returns to the original shell history instead of leaving the dashboard printed in the scrollback. It enables SGR mouse reporting and bracketed paste while active, then disables both on cleanup. It does not set a background color; Terminal, iTerm2, Ghostty, and other terminal profiles keep control of their own theme/background. Panels are drawn with Unicode box-drawing characters because terminal UIs render in character cells rather than graphical window primitives.
 
 ## Requirements
 
