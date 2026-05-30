@@ -122,6 +122,8 @@ Setupr uses a 3-tier progressive intelligence system:
 2. **Cached Responses** (Level 1) — Free after first hit. Smart deduplication
 3. **Live AI** (Level 2) — Only for novel situations. Uses compressed DSL for minimal token usage
 
+The compressed DSL is internal-only. Setupr compresses docs, scan facts, and parsed user intent before sending context to a model, but generated explanations, docs, code edits, commands, and TUI messages stay in normal human-readable language. Raw user input is preserved as the fallback source of truth, so typo-heavy or ambiguous messages can still be interpreted by the AI instead of being lost to the parser.
+
 Supports 7 AI providers (25+ models, plus custom GitHub Models catalog IDs):
 
 | Provider | Models | Env Key |
@@ -179,6 +181,8 @@ Setupr still accepts `export KEY=value` syntax in project env files for project 
 Setupr's AI layer is now a director runtime, not only a one-shot planner:
 
 - reads bounded project context from README/setup docs, `.env.example`, package scripts, Docker files, CI files, and scanner output
+- compresses setup docs into compact facts such as install/run/env/migration/service hints before model calls
+- parses user chat into compact intent facts while preserving the exact raw message for AI fallback
 - caches context under `.setupr/cache` so startup stays fast
 - turns failures into structured diagnosis and safe re-planning decisions
 - shows plan diffs when chat steering changes the active plan
@@ -196,7 +200,7 @@ The `setup` TUI is an agent workspace, not just a log viewer:
 - Before the dashboard opens, Setupr prints a plain-text warning describing what it may do.
 - Inside the TUI, the main panel shows a time-ordered timeline: system events, AI decisions, user messages, command output, warnings, and confirmations.
 - When the agent needs input, it pauses with an option card above the persistent chat input. You can pick an option, paste `KEY=value` environment blobs into `Other...`, or type a plan override such as `skip build` or `prefer pnpm`.
-- The AI director can also act on natural language while setup is open: change models, answer the current prompt, fill env values from pasted text, skip or rewrite plan steps, summarize status, and continue with the updated plan.
+- The AI director can also act on natural language while setup is open: change models, answer the current prompt, fill env values from pasted text, skip or rewrite plan steps, summarize status, and continue with the updated plan. Common typos and aliases like `skp databse`, `db`, `deps`, and `postgress` are normalized before AI fallback.
 - The AI director stays centered on the current setup task, while still allowing brief adjacent questions, clarifications, and steering without being overly strict.
 - For live AI decisions, the director receives a sanitized context packet with project scan data, OS/terminal details, config parameters, current plan, TUI state, notices, dependency/service/port state, terminal diary, and chat history. Secret values are masked before model calls.
 - The same packet includes Setupr's current command capabilities, so the director can recommend or explain git, Docker, CI, workspace, secrets, template, health, plugin, lint, format, and scaffold workflows when they are relevant.

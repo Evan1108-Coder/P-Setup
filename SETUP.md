@@ -98,6 +98,8 @@ Without an API key, Setupr works fully — it just uses pattern matching and heu
 
 Setupr reads project context before planning: README/setup docs, `.env.example`, package scripts, Docker/Compose files, CI files, scanner output, and a bounded file tree. This context is cached in `.setupr/cache`.
 
+For AI calls, Setupr uses compact internal facts for docs and user intent to reduce token usage. The raw user message is still preserved for fallback interpretation, and Setupr instructs the model to answer users in normal language rather than the internal DSL.
+
 If a setup step fails, Setupr records structured output, classifies the failure, tries deterministic recovery for known cases, and can ask the AI director to diagnose or re-plan when a provider is configured. Interrupted AI-directed workflows resume from `.setupr/agent-workflow.json`.
 
 `setupr doctor` adds severity/explanation/fix suggestions, and `setupr start` uses the same context to choose the most likely dev script and warn about blockers before starting a managed process.

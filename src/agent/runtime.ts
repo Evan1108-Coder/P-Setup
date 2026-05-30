@@ -11,6 +11,7 @@ import { diffPlans, formatPlanDiff, type PlanDiff } from "./planDiff.js";
 import { evaluateStepSafety } from "./safety.js";
 import { classifyProviderFailure, fallbackModelsFor } from "./providerDiagnostics.js";
 import { getActiveModel } from "../ai/client.js";
+import { compactDocumentsBlock } from "../ai/contextCompression.js";
 
 export interface DirectorDecision {
   action: "continue" | "retry" | "skip" | "replan" | "ask-user" | "stop";
@@ -49,10 +50,7 @@ export interface StartPlan {
 }
 
 export function buildDirectorContextPrompt(context: ProjectContext): string {
-  const docs = context.documents
-    ?.slice(0, 8)
-    .map((doc) => `# ${doc.path} (${doc.kind})\n${doc.excerpt.slice(0, 1600)}`)
-    .join("\n\n") || "No setup documents found.";
+  const docs = compactDocumentsBlock(context.documents, 12);
   const scripts = context.packageScripts
     ?.slice(0, 12)
     .map((script) => `${script.name}: ${script.command} (${script.reason})`)
@@ -63,7 +61,8 @@ export function buildDirectorContextPrompt(context: ProjectContext): string {
     `Scripts:\n${scripts}`,
     `Env missing: ${context.envVars.missing.join(", ") || "none"}`,
     `Setup hints: ${context.setupHints?.join("; ") || "none"}`,
-    `Documents:\n${docs}`,
+    `Compressed document facts:\n${docs}`,
+    "Use compressed facts only as internal context. Explain to users in normal natural language, never in DSL form.",
   ].join("\n\n");
 }
 

@@ -9,6 +9,8 @@ import { evaluateCommandSafety } from "../src/agent/safety.js";
 import { diffPlans } from "../src/agent/planDiff.js";
 import { loadAgentWorkflowCheckpoint, saveAgentWorkflowCheckpoint } from "../src/agent/workflowCheckpoint.js";
 import { providerDiagnostics } from "../src/agent/providerDiagnostics.js";
+import { compressDocumentExcerpt } from "../src/ai/contextCompression.js";
+import { contextToDSL } from "../src/ai/dsl.js";
 import type { SetupStep } from "../src/ai/planner.js";
 
 const scan: ScanResult = {
@@ -50,11 +52,26 @@ describe("agent runtime", () => {
     const second = await collectContext(tempDir, scan);
 
     expect(first.documents?.map((doc) => doc.path)).toContain("README.md");
+    expect(first.documents?.find((doc) => doc.path === "README.md")?.compact).toContain("install=");
     expect(first.setupHints?.join("\n")).toContain("database migrations");
     expect(first.packageScripts?.[0].name).toBe("dev");
     expect(first.envVars.templateKeys).toEqual(["DATABASE_URL", "PUBLIC_PORT", "API_KEY"]);
     expect(first.docker?.composeFiles).toContain("docker-compose.yml");
     expect(second.cacheHit).toBe(true);
+  });
+
+  it("compresses docs into setup facts for AI input without replacing user-facing text", () => {
+    const compact = compressDocumentExcerpt(
+      "README.md",
+      "readme",
+      "## Setup\nRequires Node >=20. Run pnpm install, copy .env.example, run pnpm db:migrate, then pnpm dev on port 5173."
+    );
+
+    expect(compact).toContain("docs.readme:README.md");
+    expect(compact).toContain("install=pnpm install");
+    expect(compact).toContain("env=.env.example");
+    expect(compact).toContain("db=pnpm db:migrate");
+    expect(compact).toContain("run=pnpm dev");
   });
 
   it("analyzes env vars without inventing sensitive values", async () => {
@@ -86,6 +103,29 @@ describe("agent runtime", () => {
     expect(steered.steps.find((step) => step.id === "build")?.status).toBe("skipped");
     expect(steered.steps.find((step) => step.id === "deps")?.command).toBe("pnpm install");
     expect(diff.changed.length).toBeGreaterThan(0);
+  });
+
+  it("steers database and Docker steps from normalized user wording", () => {
+    const steps: SetupStep[] = [
+      { id: "deps", label: "Install dependencies", type: "deps", command: "npm install", status: "pending" },
+      { id: "db", label: "Run Prisma migration", type: "script", command: "npx prisma migrate dev", status: "pending" },
+      { id: "docker", label: "Start Docker Compose", type: "script", command: "docker compose up -d", status: "pending" },
+    ];
+
+    const withoutDb = applySteeringToPlan(steps, "skip database");
+    const withoutDocker = applySteeringToPlan(steps, "skip docker");
+
+    expect(withoutDb.steps.find((step) => step.id === "db")?.status).toBe("skipped");
+    expect(withoutDb.steps.find((step) => step.id === "docker")?.status).toBe("pending");
+    expect(withoutDocker.steps.find((step) => step.id === "docker")?.status).toBe("skipped");
+  });
+
+  it("includes compact document facts in context DSL", async () => {
+    const context = await collectContext(tempDir, scan);
+    const dsl = contextToDSL(context);
+
+    expect(dsl).toContain("docs.readme:README.md");
+    expect(dsl).toContain("install=");
   });
 
   it("diagnoses peer dependency failures with a safe replan", async () => {

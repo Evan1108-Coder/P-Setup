@@ -452,19 +452,26 @@ export function applyPlanTextAdjustment(
   const hasSkipIntent = (targets: RegExp[]) =>
     skipClauses.some((clause) => targets.some((target) => target.test(clause)));
 
-  const skipRules: Array<[boolean, SetupStep["type"] | "build", string]> = [
+  type SkipStepTarget = SetupStep["type"] | "build" | "database" | "docker" | "test";
+  const skipRules: Array<[boolean, SkipStepTarget, string]> = [
     [hasSkipIntent([/\bbuild\b/]), "build", "Skipped build because you asked me not to run it."],
     [hasSkipIntent([/\binstall\b/, /\bdeps\b/, /\bdependencies\b/]), "deps", "Skipped dependency install because you asked me not to run it."],
     [hasSkipIntent([/\benv\b/, /\benvironment\b/]), "env", "Skipped environment setup because you asked me not to change it."],
     [hasSkipIntent([/\bverify\b/, /\bverification\b/]), "verify", "Skipped verification because you asked me not to run it."],
+    [hasSkipIntent([/\bdatabase\b/, /\bmigration\b/, /\bmigrate\b/, /\bprisma\b/, /\balembic\b/]), "database", "Skipped database or migration steps because you asked me not to run them."],
+    [hasSkipIntent([/\bdocker\b/, /\bcompose\b/, /\bcontainer\b/]), "docker", "Skipped Docker-related steps because you asked me not to run them."],
+    [hasSkipIntent([/\btest\b/, /\btests\b/]), "test", "Skipped test steps because you asked me not to run them."],
   ];
 
   for (const [matched, stepType, note] of skipRules) {
     if (!matched) continue;
     next = next.map((step) => {
       const isBuild = stepType === "build" && /\bbuild\b/i.test(step.id + " " + step.label + " " + (step.command || ""));
+      const isDatabase = stepType === "database" && /\b(database|migration|migrate|prisma|alembic|manage\.py migrate)\b/i.test(step.id + " " + step.label + " " + (step.command || ""));
+      const isDocker = stepType === "docker" && /\b(docker|compose|container)\b/i.test(step.id + " " + step.label + " " + (step.command || ""));
+      const isTest = stepType === "test" && /\b(test|vitest|jest|pytest|go test|cargo test)\b/i.test(step.id + " " + step.label + " " + (step.command || ""));
       const isType = step.type === stepType;
-      return isBuild || isType ? { ...step, status: "skipped" as const } : step;
+      return isBuild || isDatabase || isDocker || isTest || isType ? { ...step, status: "skipped" as const } : step;
     });
     notes.push(note);
   }

@@ -3,6 +3,8 @@ import type { AppMessage, AppStore, EnvVar, LogEntry } from "../state/store.js";
 import { visibleCommands } from "../cli/commandRegistry.js";
 import { describeDefaultModelSelection, getProviderEnvValue, PROVIDERS, type AIProvider } from "./models.js";
 import { maskSensitiveValue } from "./setupFlow.js";
+import { compactDocumentsBlock } from "./contextCompression.js";
+import type { ParsedUserIntent } from "./userIntent.js";
 
 export interface DirectorContextInput {
   cwd: string;
@@ -10,6 +12,7 @@ export interface DirectorContextInput {
   contextDSL: string;
   store: AppStore;
   userText: string;
+  parsedIntent?: ParsedUserIntent;
 }
 
 const SECRET_KEY_PATTERN =
@@ -22,10 +25,23 @@ export function buildDirectorContextPacket(input: DirectorContextInput): string 
     kind: "setupr-director-context",
     note: "Sanitized current snapshot. Secret values are masked before being sent to the live AI model.",
     userRequest: sanitizeForAI(input.userText),
+    userIntent: input.parsedIntent
+      ? {
+          compact: input.parsedIntent.compact,
+          kind: input.parsedIntent.kind,
+          action: input.parsedIntent.action,
+          target: input.parsedIntent.target,
+          value: input.parsedIntent.value ? sanitizeForAI(input.parsedIntent.value) : undefined,
+          confidence: input.parsedIntent.confidence,
+          reason: input.parsedIntent.reason,
+          rawFallback: input.parsedIntent.sanitizedRaw,
+        }
+      : null,
     project: {
       cwd: input.cwd,
       projectName: state.projectName,
       dsl: input.contextDSL,
+      compressedDocuments: compactDocumentsBlock(ctx?.documents),
       scan: input.scan,
       fileTree: ctx?.fileTree || [],
       git: ctx?.git || { isRepo: false },

@@ -29,6 +29,7 @@ export interface ProjectContext {
     path: string;
     kind: "readme" | "docs" | "setup" | "contributing" | "env" | "docker" | "ci" | "config";
     excerpt: string;
+    compact?: string;
   }>;
   packageScripts?: Array<{
     name: string;
@@ -85,7 +86,7 @@ export function contextToDSL(ctx: ProjectContext): string {
   }
 
   if (ctx.documents?.length) {
-    parts.push(`[DOCS ${ctx.documents.slice(0, 8).map((doc) => `${doc.kind}:${doc.path}`).join(",")}]`);
+    parts.push(`[DOCS ${ctx.documents.slice(0, 8).map((doc) => doc.compact || `${doc.kind}:${doc.path}`).join(" || ")}]`);
   }
 
   if (ctx.setupHints?.length) {

@@ -5,6 +5,7 @@ import { mkdir, readdir, readFile, stat, writeFile } from "fs/promises";
 import { dirname, join } from "path";
 import type { ScanResult } from "../scanner/index.js";
 import { type ProjectContext } from "../ai/dsl.js";
+import { compressDocumentExcerpt } from "../ai/contextCompression.js";
 
 export async function collectContext(cwd: string, scan: ScanResult): Promise<ProjectContext> {
   const cached = await readCachedContext(cwd, scan);
@@ -165,7 +166,8 @@ async function collectDocuments(cwd: string): Promise<NonNullable<ProjectContext
       const info = await stat(path);
       if (!info.isFile() || info.size > 512_000) continue;
       const content = await readFile(path, "utf-8");
-      docs.push({ path: candidate.path, kind: candidate.kind, excerpt: excerptDocument(content) });
+      const excerpt = excerptDocument(content);
+      docs.push({ path: candidate.path, kind: candidate.kind, excerpt, compact: compressDocumentExcerpt(candidate.path, candidate.kind, excerpt) });
     } catch {}
   }
 
@@ -177,7 +179,11 @@ async function collectDocuments(cwd: string): Promise<NonNullable<ProjectContext
         if (!entry.isFile() || !/\.(md|mdx|txt|ya?ml)$/i.test(entry.name)) continue;
         const rel = `${dir}/${entry.name}`;
         const content = await readFile(join(cwd, rel), "utf-8").catch(() => "");
-        if (content) docs.push({ path: rel, kind: dir === "docs" ? "docs" : "ci", excerpt: excerptDocument(content) });
+        if (content) {
+          const kind = dir === "docs" ? "docs" : "ci";
+          const excerpt = excerptDocument(content);
+          docs.push({ path: rel, kind, excerpt, compact: compressDocumentExcerpt(rel, kind, excerpt) });
+        }
       }
     } catch {}
   }

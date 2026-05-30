@@ -4,6 +4,8 @@ import { join } from "path";
 import { tmpdir } from "os";
 import { chdir, cwd, env } from "process";
 import { handleDirectorInput } from "../src/ai/director.js";
+import { buildDirectorContextPacket } from "../src/ai/directorContext.js";
+import { parseUserIntent } from "../src/ai/userIntent.js";
 import { createAppStore } from "../src/state/store.js";
 import type { ScanResult } from "../src/scanner/index.js";
 
@@ -147,6 +149,32 @@ describe("AI director", () => {
 
     expect(store.getState().steps.find((step) => step.id === "build")?.status).toBe("skipped");
     expect(store.getState().steps.find((step) => step.id === "deps")?.status).toBe("pending");
+  });
+
+  it("normalizes typo-heavy steering while preserving raw user wording for AI fallback", async () => {
+    const store = createAppStore(tempDir);
+    store.getState().setSteps([
+      { id: "deps", label: "Install dependencies", type: "deps", command: "npm install", status: "pending" },
+      { id: "db", label: "Run database migration", type: "script", command: "npx prisma migrate dev", status: "pending" },
+    ]);
+    const raw = "skp databse but keep deps";
+    const intent = parseUserIntent(raw);
+
+    await handleDirectorInput({
+      text: raw,
+      cwd: tempDir,
+      scan,
+      contextDSL: "js/react/npm",
+      store,
+    });
+
+    expect(intent.compact).toContain("target=database");
+    expect(store.getState().steps.find((step) => step.id === "db")?.status).toBe("skipped");
+    expect(store.getState().steps.find((step) => step.id === "deps")?.status).toBe("pending");
+
+    const packet = JSON.parse(buildDirectorContextPacket({ cwd: tempDir, scan, contextDSL: "js/react/npm", store, userText: raw, parsedIntent: intent }));
+    expect(packet.userIntent.compact).toContain("target=database");
+    expect(packet.userIntent.rawFallback).toBe(raw);
   });
 
   it("can parse pasted environment values and keep them inside setup state", async () => {

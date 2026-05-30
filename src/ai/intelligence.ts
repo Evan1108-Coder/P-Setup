@@ -2,6 +2,7 @@ import { chat, hasAIKey, type ChatMessage } from "./client.js";
 import { getCached, setCache, buildCacheKey } from "./cache.js";
 import type { ScanResult } from "../scanner/index.js";
 import { classifyAIProviderError, errorSummary } from "../errors/index.js";
+import type { ParsedUserIntent } from "./userIntent.js";
 
 export type IntelligenceLevel = "pattern" | "cached" | "live";
 
@@ -14,6 +15,7 @@ export interface IntelligenceResult {
 export interface IntelligenceOptions {
   messages?: ChatMessage[];
   directorContext?: string;
+  parsedIntent?: ParsedUserIntent;
 }
 
 // Pattern rules: instant, free answers
@@ -111,10 +113,15 @@ export async function intelligentResponse(
     content: [
       "You are Setupr's AI director — the worker and coordinator for this project setup session.",
       `Project context: ${contextDSL}.`,
+      options.parsedIntent
+        ? `Parsed user intent: ${options.parsedIntent.compact}. Raw user wording is preserved in the context packet as the fallback source of truth.`
+        : "Parsed user intent was not available.",
       options.directorContext
         ? `Full director context packet: ${options.directorContext}.`
         : "Full director context packet was not available for this command.",
       "Stay oriented to the user's current project, setup plan, environment, commands, and troubleshooting.",
+      "Internal DSL and compact facts are for your reasoning only. Never answer the user in DSL unless they explicitly ask to inspect internal context.",
+      "When parser confidence is low or the parsed intent conflicts with the raw message, trust the raw message and ask a brief clarification before acting.",
       "If the user asks something adjacent, answer briefly and connect it back to the project when useful.",
       "If the user asks something clearly unrelated, be friendly, keep it short, and gently return focus to the setup work.",
       "Do not be rigid: useful clarification, small explanations, and user steering are part of staying on task.",

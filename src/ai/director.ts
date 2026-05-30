@@ -23,6 +23,7 @@ import {
   maskEnvVars,
   mergeEnvValues,
 } from "./setupFlow.js";
+import { intentToSteeringText, parseUserIntent, type ParsedUserIntent } from "./userIntent.js";
 
 export interface DirectorInput {
   text: string;
@@ -40,6 +41,7 @@ export interface DirectorResult {
 export async function handleDirectorInput(input: DirectorInput): Promise<DirectorResult> {
   const text = input.text.trim();
   if (!text) return { handled: true, action: "empty" };
+  const parsedIntent = parseUserIntent(text);
 
   const modelResult = await maybeHandleModelIntent(input, text);
   if (modelResult) return modelResult;
@@ -53,11 +55,12 @@ export async function handleDirectorInput(input: DirectorInput): Promise<Directo
   const promptResult = maybeHandlePromptIntent(input, text);
   if (promptResult) return promptResult;
 
-  const planResult = maybeHandlePlanIntent(input, text);
+  const planResult = maybeHandlePlanIntent(input, text, parsedIntent);
   if (planResult) return planResult;
 
   const result = await intelligentResponse(text, input.scan, input.contextDSL, {
-    directorContext: buildDirectorContextPacket({ ...input, userText: text }),
+    parsedIntent,
+    directorContext: buildDirectorContextPacket({ ...input, userText: text, parsedIntent }),
   });
   input.store.getState().addMessage({
     role: "assistant",
@@ -183,19 +186,29 @@ async function maybeHandleEnvIntent(input: DirectorInput, text: string): Promise
   return { handled: true, action: "env.apply" };
 }
 
-function maybeHandlePlanIntent(input: DirectorInput, text: string): DirectorResult | null {
-  if (!/\b(skip|don'?t|dont|no|prefer|switch to|use)\b/i.test(text)) return null;
+function maybeHandlePlanIntent(input: DirectorInput, text: string, intent: ParsedUserIntent): DirectorResult | null {
+  const shouldSteer =
+    intent.kind === "plan" && intent.confidence !== "low" ||
+    /\b(skip|don'?t|dont|no|prefer|switch to|use)\b/i.test(text);
+  if (!shouldSteer) return null;
   if (/\bmodel\b/i.test(text)) return null;
 
   const state = input.store.getState();
   if (state.steps.length === 0) return null;
 
-  const adjusted = applySteeringToPlan(state.steps, text);
+  const steeringText = intent.confidence !== "low" ? intentToSteeringText(intent) : text;
+  const adjusted = applySteeringToPlan(state.steps, steeringText);
   state.setSteps(adjusted.steps);
   input.store.getState().addMessage({ role: "assistant", content: formatPlanChange(adjusted.diff) });
   for (const note of adjusted.notes) {
     input.store.getState().addMessage({ role: "thinking", content: note });
     input.store.getState().addLog({ type: "info", content: note });
+  }
+  if (intent.confidence !== "low") {
+    input.store.getState().addMessage({
+      role: "thinking",
+      content: `Interpreted input as ${intent.compact}. I kept the original wording available for AI fallback.`,
+    });
   }
   return { handled: true, action: "plan.adjust" };
 }
