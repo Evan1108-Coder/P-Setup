@@ -27,6 +27,19 @@ describe("terminal control input handling", () => {
       code: 65,
     });
   });
+
+  it("strips bracketed paste markers even when split across chunks", () => {
+    expect(stripTerminalControlInput(`${esc}[200`)).toBe("");
+    expect(stripTerminalControlInput("~first\nsecond")).toBe("first\nsecond");
+    expect(stripTerminalControlInput(`${esc}[201~`)).toBe("");
+  });
+
+  it("buffers split CSI and OSC terminal controls instead of leaking suffix text", () => {
+    expect(stripTerminalControlInput(`${esc}[1;3`)).toBe("");
+    expect(stripTerminalControlInput("Dword")).toBe("word");
+    expect(stripTerminalControlInput(`${esc}]0;Secret`)).toBe("");
+    expect(stripTerminalControlInput(` Title${esc}\\visible`)).toBe("visible");
+  });
 });
 
 describe("visual focus navigation", () => {

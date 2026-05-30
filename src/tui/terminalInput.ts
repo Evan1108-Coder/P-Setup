@@ -12,9 +12,12 @@ export interface SgrMouseReport {
 const SGR_MOUSE_PATTERN = "\\[<\\d+;\\d+;\\d+[mM]";
 const PARTIAL_SGR_MOUSE_PATTERN = "\\[<\\d*(?:;\\d*){0,2}$";
 let pendingMouseContinuation = false;
+let pendingControlContinuation = "";
 
 export function stripTerminalControlInput(value: string): string {
-  let input = value;
+  let input = `${pendingControlContinuation}${value}`;
+  pendingControlContinuation = "";
+
   if (pendingMouseContinuation) {
     const continuation = input.match(/^\d*(?:;\d*){0,2}[mM]?/);
     if (continuation?.[0]) {
@@ -27,12 +30,20 @@ export function stripTerminalControlInput(value: string): string {
     pendingMouseContinuation = true;
   }
 
+  const partial = findPartialTerminalControl(input);
+  if (partial) {
+    pendingControlContinuation = partial.sequence;
+    input = input.slice(0, partial.index);
+  }
+
   const stripped = input
     .replace(new RegExp(`${escapeRegExp(ESC)}${SGR_MOUSE_PATTERN}`, "g"), "")
     .replace(new RegExp(SGR_MOUSE_PATTERN, "g"), "")
+    .replace(new RegExp(`${escapeRegExp(ESC)}\\[200~|${escapeRegExp(ESC)}\\[201~`, "g"), "")
     .replace(new RegExp(`${escapeRegExp(ESC)}\\[[0-?]*[ -/]*[@-~]`, "g"), "")
     .replace(new RegExp(`${escapeRegExp(ESC)}\\][^${escapeRegExp(BEL)}]*(?:${escapeRegExp(BEL)}|${escapeRegExp(ESC)}\\\\)`, "g"), "")
     .replace(new RegExp(`${escapeRegExp(ESC)}\\[M.{0,3}`, "g"), "")
+    .replace(new RegExp(`${escapeRegExp(ESC)}.`, "g"), "")
     .replace(new RegExp(PARTIAL_SGR_MOUSE_PATTERN), "")
     .split(ESC).join("");
   return stripC0Controls(stripped);
@@ -66,6 +77,19 @@ function classifySgrMouse(code: number, final: "M" | "m"): SgrMouseReport["actio
 
 function escapeRegExp(value: string): string {
   return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+function findPartialTerminalControl(input: string): { index: number; sequence: string } | null {
+  const escIndex = input.lastIndexOf(ESC);
+  if (escIndex === -1) return null;
+  const tail = input.slice(escIndex);
+  if (tail === ESC) return { index: escIndex, sequence: tail };
+  if (/^\x1B\[[0-?]*[ -/]*$/.test(tail)) return { index: escIndex, sequence: tail };
+  if (/^\x1B\][^\x07]*(?:\x1B)?$/.test(tail) && !/\x07|\x1B\\/.test(tail)) {
+    return { index: escIndex, sequence: tail };
+  }
+  if (/^\x1B\[200$|^\x1B\[201$/.test(tail)) return { index: escIndex, sequence: tail };
+  return null;
 }
 
 function stripC0Controls(value: string): string {

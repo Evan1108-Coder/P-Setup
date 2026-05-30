@@ -59,6 +59,15 @@ export function BoundedTextInput({
 
   useInput((input, key) => {
     const mouse = parseSgrMouse(input);
+    if (mouse?.action === "press") {
+      if (scrollBounds && pointInBounds(mouse.x, mouse.y, scrollBounds)) {
+        const line = clamp(mouse.y - scrollBounds.y + scrollLine, 0, Math.max(0, lines.length - 1));
+        const column = clamp(mouse.x - scrollBounds.x, 0, wrapWidth);
+        setCursor(cursorForWrappedPosition(value, line, column, wrapWidth));
+      }
+      return;
+    }
+
     if (mouse?.action === "scroll") {
       if (scrollBounds && !pointInBounds(mouse.x, mouse.y, scrollBounds)) {
         return;
@@ -67,7 +76,13 @@ export function BoundedTextInput({
       return;
     }
 
-    const cleanInput = stripTerminalControlInput(input).replace(/\r?\n/g, " ");
+    const shortcut = shortcutFromInput(input, key);
+    if (shortcut) {
+      applyShortcut(shortcut, value, cursor, onChange, setCursor);
+      return;
+    }
+
+    const cleanInput = stripTerminalControlInput(input).replace(/\r\n/g, "\n").replace(/\r/g, "\n");
     if (!cleanInput && !key.return && !key.backspace && !key.delete && !key.leftArrow && !key.rightArrow) {
       return;
     }
@@ -77,11 +92,17 @@ export function BoundedTextInput({
       return;
     }
 
-    if (key.backspace || key.delete) {
+    if (key.backspace || input === "\x7f") {
       if (cursor === 0) return;
       const next = value.slice(0, cursor - 1) + value.slice(cursor);
       onChange(next);
       setCursor((current) => Math.max(0, current - 1));
+      return;
+    }
+
+    if (key.delete) {
+      if (cursor >= value.length) return;
+      onChange(value.slice(0, cursor) + value.slice(cursor + 1));
       return;
     }
 
@@ -111,25 +132,128 @@ export function BoundedTextInput({
 }
 
 function wrapLines(value: string, width: number): string[] {
+  return wrapLineSegments(value, width).map((line) => line.text);
+}
+
+function wrapLineSegments(value: string, width: number): Array<{ text: string; start: number }> {
   const rawLines = value.split("\n");
-  const lines: string[] = [];
+  const lines: Array<{ text: string; start: number }> = [];
+  let absoluteIndex = 0;
 
   for (const rawLine of rawLines) {
     if (rawLine.length === 0) {
-      lines.push("");
+      lines.push({ text: "", start: absoluteIndex });
+      absoluteIndex += 1;
       continue;
     }
     for (let index = 0; index < rawLine.length; index += width) {
-      lines.push(rawLine.slice(index, index + width));
+      lines.push({ text: rawLine.slice(index, index + width), start: absoluteIndex + index });
     }
+    absoluteIndex += rawLine.length + 1;
   }
 
-  return lines.length > 0 ? lines : [""];
+  return lines.length > 0 ? lines : [{ text: "", start: 0 }];
 }
 
 function findLineForCursor(value: string, cursor: number, width: number): number {
   const beforeCursor = value.slice(0, cursor);
   return wrapLines(beforeCursor, width).length - 1;
+}
+
+function cursorForWrappedPosition(value: string, line: number, column: number, width: number): number {
+  const segments = wrapLineSegments(value, width);
+  const segment = segments[clamp(line, 0, Math.max(0, segments.length - 1))];
+  return clamp(segment.start + Math.min(column, segment.text.length), 0, value.length);
+}
+
+type InputShortcut =
+  | "start"
+  | "end"
+  | "clear-before"
+  | "clear-after"
+  | "delete-word-before"
+  | "delete-word-after"
+  | "delete-forward"
+  | "word-left"
+  | "word-right";
+
+function shortcutFromInput(input: string, key: { ctrl?: boolean; meta?: boolean; delete?: boolean }): InputShortcut | null {
+  if (key.ctrl) {
+    if (input === "a" || input === "\x01") return "start";
+    if (input === "e" || input === "\x05") return "end";
+    if (input === "u" || input === "\x15") return "clear-before";
+    if (input === "k" || input === "\x0b") return "clear-after";
+    if (input === "w" || input === "\x17") return "delete-word-before";
+    if (input === "d" || input === "\x04") return "delete-forward";
+  }
+  if (input === "\x17") return "delete-word-before";
+  if (input === "\x1bb" || input === "\x1b[1;3D" || input === "\x1b[1;9D") return "word-left";
+  if (input === "\x1bf" || input === "\x1b[1;3C" || input === "\x1b[1;9C") return "word-right";
+  if (input === "\x1b\x7f" || input === "\x1b\b" || input === "\x1b[3;3~") return "delete-word-before";
+  if (input === "\x1b[3~" && key.delete) return "delete-forward";
+  return null;
+}
+
+function applyShortcut(
+  shortcut: InputShortcut,
+  value: string,
+  cursor: number,
+  onChange: (value: string) => void,
+  setCursor: React.Dispatch<React.SetStateAction<number>>
+): void {
+  if (shortcut === "start") {
+    setCursor(0);
+    return;
+  }
+  if (shortcut === "end") {
+    setCursor(value.length);
+    return;
+  }
+  if (shortcut === "clear-before") {
+    onChange(value.slice(cursor));
+    setCursor(0);
+    return;
+  }
+  if (shortcut === "clear-after") {
+    onChange(value.slice(0, cursor));
+    return;
+  }
+  if (shortcut === "delete-forward") {
+    if (cursor < value.length) onChange(value.slice(0, cursor) + value.slice(cursor + 1));
+    return;
+  }
+  if (shortcut === "word-left") {
+    setCursor(previousWordIndex(value, cursor));
+    return;
+  }
+  if (shortcut === "word-right") {
+    setCursor(nextWordIndex(value, cursor));
+    return;
+  }
+  if (shortcut === "delete-word-before") {
+    const nextCursor = previousWordIndex(value, cursor);
+    onChange(value.slice(0, nextCursor) + value.slice(cursor));
+    setCursor(nextCursor);
+    return;
+  }
+  if (shortcut === "delete-word-after") {
+    const nextCursor = nextWordIndex(value, cursor);
+    onChange(value.slice(0, cursor) + value.slice(nextCursor));
+  }
+}
+
+function previousWordIndex(value: string, cursor: number): number {
+  let index = Math.max(0, cursor);
+  while (index > 0 && /\s/.test(value[index - 1])) index--;
+  while (index > 0 && !/\s/.test(value[index - 1])) index--;
+  return index;
+}
+
+function nextWordIndex(value: string, cursor: number): number {
+  let index = Math.min(value.length, cursor);
+  while (index < value.length && /\s/.test(value[index])) index++;
+  while (index < value.length && !/\s/.test(value[index])) index++;
+  return index;
 }
 
 function clamp(value: number, min: number, max: number): number {
