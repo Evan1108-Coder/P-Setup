@@ -35,6 +35,11 @@ export async function runNonTUICommand(
       await cmdAuth(sub, cwd, { ...flags, args: flags.args || [] });
       break;
     }
+    case "chat": {
+      const { cmdChat } = await import("./chat.js");
+      await cmdChat(sub, cwd, { ...flags, args: flags.args || [] });
+      break;
+    }
     case "info":
       await cmdInfo(cwd);
       break;

@@ -74,6 +74,7 @@ export const COMMAND_REGISTRY: CommandEntry[] = [
     aiCapable: true,
     examples: ["setupr setup", "setupr setup --force", "setupr setup --plain --force"],
   },
+  { id: "chat", name: "chat", summary: "Ask the AI director about the current project, plan, errors, env, git, or commands.", usage: "setupr chat <question or instruction> [--model <id>] [--json]", mode: "plain", options: flagOptions("--model <id>", "--provider <name>", "--json", "--smart"), aiCapable: true, examples: ["setupr chat how do I start this app?", "setupr chat use moonshot-v1-128k", "setupr chat what failed last time?"] },
   { id: "status", name: "status", summary: "Show project health, git, env, process, and history status.", usage: "setupr status [--plain|--json|--tui|--watch]", mode: "both", allowsSubcommand: false, options: flagOptions("--plain, --no-tui", "--json", "--tui", "--watch", "--smart"), aiCapable: true, examples: ["setupr status", "setupr status --json"] },
   { id: "start", name: "start", summary: "Start and track a managed project process.", usage: "setupr start [target] [--plain|--tui|--watch|--force]", mode: "both", options: flagOptions("--plain, --no-tui", "--tui", "--smart", "--watch", "--force"), risk: "low", aiCapable: true, writes: true },
   { id: "ps", name: "ps", summary: "List Setupr-managed project processes.", usage: "setupr ps [--plain|--json]", mode: "plain", allowsSubcommand: false, options: flagOptions("--plain, --no-tui", "--json") },

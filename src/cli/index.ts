@@ -18,6 +18,7 @@ const cli = meow(
 
   Commands
     setup       Full project setup (scan, install, configure)
+    chat        Ask the AI director about the current project
     start       Detect and run project
     doctor      Diagnose environment health
     update      Check for dependency updates
@@ -69,6 +70,7 @@ const cli = meow(
 
   Examples
     $ setup
+    $ setup chat how do I start this app?
     $ setup doctor
     $ setup auth login
     $ setup env smart
