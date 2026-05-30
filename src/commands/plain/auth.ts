@@ -29,6 +29,7 @@ import { readFile, writeFile } from "fs/promises";
 import { join } from "path";
 import { parseEnvPairs } from "../../env/index.js";
 import { classifyAIProviderError, createSetuprError, fromUnknownError, printPlainError, type SetuprError } from "../../errors/index.js";
+import { fallbackModelsFor, providerDiagnostics } from "../../agent/providerDiagnostics.js";
 
 interface AuthFlags {
   force?: boolean;
@@ -277,6 +278,16 @@ async function authDoctor(): Promise<void> {
   console.log(`  Secret file: ${chalk.dim(secretsPath())}`);
   console.log(`  Storage:     ${chalk.dim("global user auth, not project .env")}`);
   console.log(`  Project env: ${chalk.dim("still used for app/project variables; provider keys should be migrated")}`);
+  console.log("");
+  console.log(chalk.blue.bold("  Provider Robustness\n"));
+  for (const diagnostic of providerDiagnostics()) {
+    const marker = diagnostic.configured ? chalk.green("●") : chalk.dim("○");
+    const fallback = diagnostic.profile.fallbackModels.join(", ");
+    console.log(`  ${marker} ${PROVIDER_LABELS[diagnostic.provider].padEnd(15)} timeout ${diagnostic.profile.timeoutMs}ms, retries ${diagnostic.profile.retries}, fallback ${chalk.dim(fallback || "none")}`);
+  }
+  const active = getDefaultModel();
+  const fallbacks = fallbackModelsFor(active).slice(0, 4).map((model) => model.id);
+  console.log(chalk.dim(`\n  Active fallback chain: ${fallbacks.length ? fallbacks.join(" -> ") : "none configured"}`));
   console.log("");
 }
 

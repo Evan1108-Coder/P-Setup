@@ -534,7 +534,7 @@ function emptyStepTypeCounts(): Record<SetupStep["type"], number> {
   };
 }
 
-function isSensitiveEnvKey(key: string): boolean {
+export function isSensitiveEnvKey(key: string): boolean {
   return SENSITIVE_KEY_PATTERN.test(key);
 }
 

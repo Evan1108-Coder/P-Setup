@@ -20,6 +20,9 @@ interface PluginManifest {
     apiVersion?: string;
     commands?: string[];
     scanners?: string[];
+    planners?: string[];
+    doctorChecks?: string[];
+    fixers?: string[];
     panels?: string[];
   };
 }
@@ -317,6 +320,9 @@ async function pluginCreate(cwd: string, flags: { args?: string[]; force?: boole
       apiVersion: "1",
       commands: ["example"],
       scanners: [],
+      planners: [],
+      doctorChecks: [],
+      fixers: [],
       panels: [],
     },
   }, null, 2) + "\n");
@@ -371,8 +377,8 @@ async function pluginValidate(cwd: string, flags: { args?: string[] }): Promise<
   const setuprBlock = manifest.setupr;
   if (!setuprBlock) issues.push("package.json should include a setupr block with apiVersion and extension metadata.");
   if (setuprBlock && setuprBlock.apiVersion !== "1") issues.push("setupr.apiVersion must be \"1\".");
-  if (setuprBlock && !Array.isArray(setuprBlock.commands) && !Array.isArray(setuprBlock.scanners) && !Array.isArray(setuprBlock.panels)) {
-    issues.push("setupr block should define commands, scanners, or panels arrays.");
+  if (setuprBlock && !Array.isArray(setuprBlock.commands) && !Array.isArray(setuprBlock.scanners) && !Array.isArray(setuprBlock.panels) && !Array.isArray(setuprBlock.planners) && !Array.isArray(setuprBlock.doctorChecks) && !Array.isArray(setuprBlock.fixers)) {
+    issues.push("setupr block should define commands, scanners, planners, doctorChecks, fixers, or panels arrays.");
   }
 
   const mainPath = typeof manifest.main === "string" ? join(target, manifest.main) : undefined;
@@ -402,6 +408,7 @@ async function pluginDoctor(cwd: string): Promise<void> {
   console.log(`  Enabled plugins:    ${chalk.white(String(config.plugins.filter((plugin) => plugin.enabled).length))}`);
   console.log(`  Scaffold command:   ${chalk.dim("setupr plugin create <name>")}`);
   console.log(`  Validate command:   ${chalk.dim("setupr plugin validate <path>")}`);
+  console.log(`  Extension points:   ${chalk.dim("commands, scanners, planners, doctorChecks, fixers, panels")}`);
   console.log("");
 }
 
@@ -412,9 +419,53 @@ function normalizePluginPackageName(value: string): string {
 }
 
 function pluginStarterSource(packageName: string): string {
-  return `export const plugin = {
+  return `/** @type {import("setupr/dist/plugins/api.js").SetuprPlugin} */
+export const plugin = {
   name: "${packageName}",
   apiVersion: "1",
+  scanners: [
+    {
+      name: "example-scan",
+      scan(context) {
+        context.log("Scanning from ${packageName}");
+        return { exampleSignal: true };
+      },
+    },
+  ],
+  planners: [
+    {
+      name: "example-plan",
+      plan(_context, steps) {
+        return steps;
+      },
+    },
+  ],
+  doctorChecks: [
+    {
+      name: "example-check",
+      async check() {
+        return { status: "pass", message: "Example plugin check passed." };
+      },
+    },
+  ],
+  fixers: [
+    {
+      name: "example-fixer",
+      canFix() {
+        return false;
+      },
+      async fix() {},
+    },
+  ],
+  panels: [
+    {
+      id: "example-panel",
+      title: "Example",
+      renderText() {
+        return "Plugin panel content";
+      },
+    },
+  ],
   commands: [
     {
       name: "example",

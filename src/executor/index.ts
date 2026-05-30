@@ -5,6 +5,9 @@ import { createSnapshot } from "./undo.js";
 import { initEnvFile } from "../env/index.js";
 import { classifyCommandFailure, createSetuprError, errorSummary, type SetuprError } from "../errors/index.js";
 import { saveCheckpoint } from "../state/checkpoint.js";
+import { diagnoseStepFailure, formatPlanChange } from "../agent/runtime.js";
+import { evaluateStepSafety } from "../agent/safety.js";
+import { saveAgentWorkflowCheckpoint } from "../agent/workflowCheckpoint.js";
 
 export interface ExecutionResult {
   success: boolean;
@@ -35,6 +38,28 @@ export async function executeStep(
 
   if (!step.command) {
     return handleSpecialStep(step, cwd, store);
+  }
+
+  const safety = evaluateStepSafety(step);
+  if (safety.decision === "block") {
+    const psetupError = createSetuprError({
+      code: "COMMAND_ABORTED",
+      command: step.command,
+      cwd,
+      details: safety.reasons,
+      canContinue: false,
+      forceBehavior: "Force mode cannot bypass blocked safety policy actions.",
+    });
+    store.getState().updateStep(step.id, { status: "failed", error: psetupError.title });
+    store.getState().addLog({ content: `✗ ${step.label} — blocked by safety policy`, type: "error" });
+    store.getState().addMessage({ role: "system", content: errorSummary(psetupError) });
+    return { success: false, output: "", error: psetupError.explanation, psetupError, duration: Date.now() - start };
+  }
+  if (safety.decision === "confirm") {
+    store.getState().addMessage({
+      role: "thinking",
+      content: `Safety review for "${step.label}": ${safety.risk} risk. ${safety.reasons.join(" ")}`,
+    });
   }
 
   store.getState().addLog({ content: step.command, type: "command" });
@@ -267,6 +292,7 @@ export async function executeAllSteps(
 ): Promise<{ success: boolean; results: ExecutionResult[] }> {
   const results: ExecutionResult[] = [];
   const scan = store.getState().scan;
+  const context = store.getState().context;
   store.getState().setRunning(true);
 
   for (let i = 0; i < steps.length; i++) {
@@ -294,6 +320,49 @@ export async function executeAllSteps(
     }
 
     if (!result.success && step.type !== "verify") {
+      if (scan && context) {
+        store.getState().addMessage({ role: "thinking", content: `Diagnosing failure in "${step.label}"...` });
+        const decision = await diagnoseStepFailure({ cwd, context, step, steps: store.getState().steps, result });
+        store.getState().addMessage({ role: "thinking", content: decision.reason });
+
+        if (decision.planDiff) {
+          store.getState().addMessage({ role: "assistant", content: formatPlanChange(decision.planDiff) });
+          await saveAgentWorkflowCheckpoint(cwd, {
+            cwd,
+            command: "setup",
+            phase: "diagnosing",
+            activeStepId: step.id,
+            steps: decision.newSteps || store.getState().steps,
+            completedStepIds: store.getState().steps.filter((candidate) => candidate.status === "done").map((candidate) => candidate.id),
+            failedStepIds: [step.id],
+            skippedStepIds: store.getState().steps.filter((candidate) => candidate.status === "skipped").map((candidate) => candidate.id),
+            userAnswers: [],
+            lastDecision: decision.reason,
+            lastPlanDiff: decision.planDiff,
+            safeOutputs: [{
+              stepId: step.id,
+              excerpt: `${result.error || ""}\n${result.output || ""}`.slice(0, 1200),
+              timestamp: Date.now(),
+            }],
+          }).catch(() => undefined);
+        }
+
+        if (decision.action === "continue" || decision.action === "skip") {
+          store.getState().updateStep(step.id, { status: decision.action === "skip" ? "skipped" : "done" });
+          store.getState().nextStep();
+          continue;
+        }
+
+        if (decision.action === "replan" && decision.newSteps?.length) {
+          store.getState().setSteps(decision.newSteps);
+          return executeAllSteps(decision.newSteps, cwd, store, i);
+        }
+
+        if (decision.action === "ask-user" && decision.prompt) {
+          store.getState().addNotice({ type: "warning", message: decision.prompt });
+          store.getState().addMessage({ role: "assistant", content: decision.prompt });
+        }
+      }
       store.getState().setRunning(false);
       return { success: false, results };
     }
@@ -303,5 +372,23 @@ export async function executeAllSteps(
 
   store.getState().setRunning(false);
   store.getState().setComplete(true);
+  if (scan) {
+    await saveAgentWorkflowCheckpoint(cwd, {
+      cwd,
+      command: "setup",
+      phase: "complete",
+      steps: store.getState().steps,
+      completedStepIds: store.getState().steps.filter((step) => step.status === "done").map((step) => step.id),
+      failedStepIds: store.getState().steps.filter((step) => step.status === "failed").map((step) => step.id),
+      skippedStepIds: store.getState().steps.filter((step) => step.status === "skipped").map((step) => step.id),
+      userAnswers: [],
+      lastDecision: "Workflow completed.",
+      safeOutputs: results.map((result, index) => ({
+        stepId: steps[index]?.id || `step-${index + 1}`,
+        excerpt: `${result.error || ""}\n${result.output || ""}`.slice(0, 1200),
+        timestamp: Date.now(),
+      })),
+    }).catch(() => undefined);
+  }
   return { success: true, results };
 }

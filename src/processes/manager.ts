@@ -5,6 +5,8 @@ import { basename, dirname, join } from "path";
 import { scanProject } from "../scanner/index.js";
 import { ensureProjectStateDir } from "../state/project.js";
 import { createSetuprError } from "../errors/index.js";
+import { collectContext } from "../context/collector.js";
+import { chooseStartPlan } from "../agent/runtime.js";
 
 export interface ManagedProcess {
   id: string;
@@ -199,7 +201,9 @@ async function resolveStartCommand(cwd: string, target?: string): Promise<string
     }
     return `${pm} run ${target}`;
   }
-  const script = ["dev", "start", "serve", "develop", "watch"].find((name) => scan.scripts[name]);
+  const context = await collectContext(cwd, scan).catch(() => null);
+  const smart = context ? chooseStartPlan(context) : null;
+  const script = smart?.script || ["dev", "start", "serve", "develop", "watch"].find((name) => scan.scripts[name]);
   if (!script) {
     throw createSetuprError({
       code: "MISSING_SCRIPT",
@@ -207,6 +211,13 @@ async function resolveStartCommand(cwd: string, target?: string): Promise<string
       cwd,
       details: ["No dev, start, serve, develop, or watch script was found."],
     });
+  }
+  if (smart?.blockers.length) {
+    // Startup can still run, but preserve the warning in the managed process log.
+    const logDir = await processLogDir(cwd).catch(() => null);
+    if (logDir) {
+      await appendLog(join(logDir, "start-warnings.log"), `[setupr] smart start warning: ${smart.blockers.join("; ")}\n`).catch(() => undefined);
+    }
   }
   return `${pm} run ${script}`;
 }

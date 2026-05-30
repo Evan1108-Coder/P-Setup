@@ -2,12 +2,15 @@ import chalk from "chalk";
 import ora from "ora";
 import { scanProject } from "../scanner/index.js";
 import { planSteps } from "../ai/planner.js";
-import { executeStep, runCommand } from "../executor/index.js";
+import { executeAllSteps, runCommand } from "../executor/index.js";
 import { createAppStore } from "../state/store.js";
 import { hasProjectSignals } from "../tui/projectSignals.js";
 import { createSetuprError, printPlainError, classifyCommandFailure } from "../errors/index.js";
 import { deleteCheckpoint, formatCheckpointAge, loadCheckpoint, saveCheckpoint } from "../state/checkpoint.js";
 import { collectDashboardStatus } from "../status/collector.js";
+import { collectContext } from "../context/collector.js";
+import { analyzeEnvTemplate, createPostSetupSummary, doctorInsights, formatEnvInsights } from "../agent/runtime.js";
+import { deleteAgentWorkflowCheckpoint } from "../agent/workflowCheckpoint.js";
 
 interface PlainOptions {
   force?: boolean;
@@ -18,7 +21,7 @@ interface PlainOptions {
 export async function runPlainMode(command: string, cwd: string, sub?: string, options: PlainOptions = {}): Promise<void> {
   switch (command) {
     case "setup":
-      await plainSetup(cwd);
+      await plainSetup(cwd, options);
       break;
     case "dashboard":
     case "status":
@@ -80,8 +83,12 @@ async function plainStatus(cwd: string, fromDashboard = false, options: PlainOpt
   console.log("");
 }
 
-async function plainSetup(cwd: string): Promise<void> {
-  const checkpoint = await loadCheckpoint(cwd);
+async function plainSetup(cwd: string, options: PlainOptions = {}): Promise<void> {
+  if (options.force) {
+    await deleteCheckpoint(cwd);
+    await deleteAgentWorkflowCheckpoint(cwd);
+  }
+  const checkpoint = options.force ? null : await loadCheckpoint(cwd);
   let scan;
   let steps;
   let startIndex = 0;
@@ -114,53 +121,51 @@ async function plainSetup(cwd: string): Promise<void> {
   if (scan.services.length) console.log(chalk.dim(`  Services: ${scan.services.join(", ")}`));
 
   if (!steps) {
+    const context = await collectContext(cwd, scan);
     const planSpinner = ora("Planning setup steps...").start();
-    steps = await planSteps(scan);
+    steps = await planSteps(scan, context);
     planSpinner.succeed(`${steps.length} steps planned`);
+    const envInsights = analyzeEnvTemplate(context);
+    if (envInsights.length) {
+      console.log(chalk.dim("\n  Env intelligence"));
+      for (const line of formatEnvInsights(envInsights).split("\n").slice(0, 8)) console.log(chalk.dim(`  • ${line}`));
+    }
   }
 
   const store = createAppStore(cwd);
   store.getState().setScan(scan);
   store.getState().setSteps(steps);
+  const context = await collectContext(cwd, scan);
+  store.getState().setContext(context);
 
-  let failures = 0;
-  const completedIds: string[] = checkpoint?.completedSteps || [];
-  for (let i = 0; i < steps.length; i++) {
+  for (let i = 0; i < startIndex; i++) {
     const step = steps[i];
-    if (i < startIndex) {
-      console.log(chalk.dim(`  ○ ${step.label} (already done)`));
-      continue;
-    }
+    if (step) console.log(chalk.dim(`  ○ ${step.label} (already done)`));
+  }
+  const result = await executeAllSteps(steps, cwd, store, startIndex);
 
-    const stepSpinner = ora(step.label).start();
-    const result = await executeStep(step, cwd, store);
-    if (result.success) {
-      stepSpinner.succeed(step.label);
-      completedIds.push(step.id);
-    } else {
-      stepSpinner.fail(`${step.label} — ${result.psetupError?.title || result.error || "failed"}`);
-      if (result.psetupError) printPlainError(result.psetupError);
-      failures++;
-      break;
-    }
-
+  console.log("");
+  if (result.success) {
+    await deleteCheckpoint(cwd);
+    console.log(createPostSetupSummary({
+      context,
+      steps: store.getState().steps,
+      results: result.results,
+      envInsights: analyzeEnvTemplate(context),
+    }).split("\n").map((line) => `  ${line}`).join("\n"));
+    console.log(chalk.green.bold("✓ Setup complete!"));
+  } else {
+    const failed = store.getState().steps.filter((step) => step.status === "failed").length || 1;
     try {
       await saveCheckpoint(cwd, {
         cwd,
         scan,
         steps: store.getState().steps,
-        currentStepIndex: i + 1,
-        completedSteps: completedIds,
+        currentStepIndex: store.getState().currentStepIndex,
+        completedSteps: store.getState().steps.filter((step) => step.status === "done").map((step) => step.id),
       });
     } catch {}
-  }
-
-  console.log("");
-  if (failures === 0) {
-    await deleteCheckpoint(cwd);
-    console.log(chalk.green.bold("✓ Setup complete!"));
-  } else {
-    console.log(chalk.yellow.bold(`⚠ Setup finished with ${failures} failed step${failures > 1 ? "s" : ""}`));
+    console.log(chalk.yellow.bold(`⚠ Setup finished with ${failed} failed step${failed > 1 ? "s" : ""}`));
     console.log(chalk.dim("  Run 'setup' again to resume from where it left off."));
     process.exitCode = 1;
   }
@@ -210,6 +215,18 @@ async function plainDoctor(cwd: string): Promise<void> {
   console.log(chalk.dim(`\n  Language: ${scan.language || "unknown"}`));
   console.log(chalk.dim(`  Framework: ${scan.framework || "none"}`));
   if (scan.services.length) console.log(chalk.dim(`  Services: ${scan.services.join(", ")}`));
+  const context = await collectContext(cwd, scan);
+  const insights = doctorInsights(context);
+  if (insights.length) {
+    console.log(chalk.yellow.bold("\n  AI Director Diagnosis\n"));
+    for (const insight of insights) {
+      const marker = insight.severity === "error" ? chalk.red("✗") : insight.severity === "warning" ? chalk.yellow("△") : chalk.blue("ℹ");
+      console.log(`  ${marker} ${chalk.white(insight.issue)} — ${chalk.dim(insight.explanation)}`);
+      if (insight.fix) {
+        console.log(chalk.dim(`    Fix: ${insight.fix.label}${insight.fix.command ? ` (${insight.fix.command})` : ""}${insight.fix.safe ? " [safe]" : ""}`));
+      }
+    }
+  }
 }
 
 async function plainStart(cwd: string, target: string | undefined, options: PlainOptions): Promise<void> {

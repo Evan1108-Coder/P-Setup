@@ -1,6 +1,6 @@
 import { chat, hasAIKey, type ChatMessage } from "./client.js";
 import type { ScanResult } from "../scanner/index.js";
-import { scanResultToDSL } from "./dsl.js";
+import { scanResultToDSL, type ProjectContext } from "./dsl.js";
 
 export interface SetupStep {
   id: string;
@@ -12,15 +12,15 @@ export interface SetupStep {
   error?: string;
 }
 
-export async function planSteps(scan: ScanResult): Promise<SetupStep[]> {
+export async function planSteps(scan: ScanResult, context?: ProjectContext): Promise<SetupStep[]> {
   if (hasAIKey() && shouldUseAIPlanner(scan)) {
     try {
-      return await planStepsWithAI(scan);
+      return await planStepsWithAI(scan, context);
     } catch {
       // fallback to heuristic
     }
   }
-  return planStepsHeuristic(scan);
+  return planStepsHeuristic(scan, context);
 }
 
 export function shouldUseAIPlanner(scan: ScanResult): boolean {
@@ -43,8 +43,9 @@ export function shouldUseAIPlanner(scan: ScanResult): boolean {
   return knownSignals.length === 0 && scan.configFiles.length > 0;
 }
 
-async function planStepsWithAI(scan: ScanResult): Promise<SetupStep[]> {
+async function planStepsWithAI(scan: ScanResult, context?: ProjectContext): Promise<SetupStep[]> {
   const dsl = scanResultToDSL(scan);
+  const contextBlock = context ? planningContextPrompt(context).slice(0, 6000) : "No document context loaded.";
 
   const messages: ChatMessage[] = [
     {
@@ -55,7 +56,7 @@ Be practical and specific to the detected stack.`,
     },
     {
       role: "user",
-      content: `Plan setup steps for: ${dsl}\nScripts available: ${Object.keys(scan.scripts).join(", ") || "none"}\nServices: ${scan.services.join(", ") || "none"}`,
+      content: `Plan setup steps for: ${dsl}\nScripts available: ${Object.keys(scan.scripts).join(", ") || "none"}\nServices: ${scan.services.join(", ") || "none"}\n\nProject context:\n${contextBlock}`,
     },
   ];
 
@@ -77,7 +78,7 @@ Be practical and specific to the detected stack.`,
   }
 }
 
-export function planStepsHeuristic(scan: ScanResult): SetupStep[] {
+export function planStepsHeuristic(scan: ScanResult, context?: ProjectContext): SetupStep[] {
   const steps: SetupStep[] = [];
 
   // Runtime check/install
@@ -121,6 +122,26 @@ export function planStepsHeuristic(scan: ScanResult): SetupStep[] {
       type: "verify",
       status: "pending",
     });
+  }
+
+  if (context?.setupHints?.some((hint) => /migration/i.test(hint))) {
+    const migrationScript = Object.keys(scan.scripts).find((name) => /migrate|db/.test(name));
+    if (migrationScript) {
+      steps.push({
+        id: "migrations",
+        label: "Run documented database migration step",
+        type: "script",
+        command: `${scan.packageManager || "npm"} run ${migrationScript}`,
+        status: "pending",
+      });
+    } else {
+      steps.push({
+        id: "migrations-note",
+        label: "Review documented database migration step",
+        type: "verify",
+        status: "pending",
+      });
+    }
   }
 
   // Post-install scripts
@@ -187,4 +208,21 @@ function getVersionCheckCommand(runtime: string): string {
     java: "java --version",
   };
   return cmds[runtime] || `${runtime} --version`;
+}
+
+function planningContextPrompt(context: ProjectContext): string {
+  const docs = context.documents
+    ?.slice(0, 6)
+    .map((doc) => `${doc.path}: ${doc.excerpt.slice(0, 900)}`)
+    .join("\n\n") || "No setup documents.";
+  const scripts = context.packageScripts
+    ?.slice(0, 10)
+    .map((script) => `${script.name}: ${script.command}`)
+    .join("\n") || "No scripts.";
+  return [
+    `Scripts:\n${scripts}`,
+    `Env missing: ${context.envVars.missing.join(", ") || "none"}`,
+    `Hints: ${context.setupHints?.join("; ") || "none"}`,
+    `Docs:\n${docs}`,
+  ].join("\n\n");
 }

@@ -3,6 +3,8 @@ import type { ScanResult } from "../scanner/index.js";
 export interface ProjectContext {
   cwd: string;
   scan: ScanResult;
+  collectedAt?: number;
+  cacheHit?: boolean;
   terminal: {
     shell: string;
     term: string;
@@ -20,8 +22,28 @@ export interface ProjectContext {
   envVars: {
     defined: string[];
     missing: string[];
+    templateKeys?: string[];
   };
   fileTree: string[];
+  documents?: Array<{
+    path: string;
+    kind: "readme" | "docs" | "setup" | "contributing" | "env" | "docker" | "ci" | "config";
+    excerpt: string;
+  }>;
+  packageScripts?: Array<{
+    name: string;
+    command: string;
+    score: number;
+    reason: string;
+  }>;
+  setupHints?: string[];
+  docker?: {
+    files: string[];
+    composeFiles: string[];
+  };
+  ci?: {
+    files: string[];
+  };
 }
 
 export function contextToDSL(ctx: ProjectContext): string {
@@ -56,6 +78,18 @@ export function contextToDSL(ctx: ProjectContext): string {
   // Missing env vars
   if (ctx.envVars.missing.length > 0) {
     parts.push(`[ENV miss=${ctx.envVars.missing.slice(0, 5).join(",")}]`);
+  }
+
+  if (ctx.packageScripts?.length) {
+    parts.push(`[SCRIPTS ${ctx.packageScripts.slice(0, 8).map((s) => `${s.name}:${s.score}`).join(",")}]`);
+  }
+
+  if (ctx.documents?.length) {
+    parts.push(`[DOCS ${ctx.documents.slice(0, 8).map((doc) => `${doc.kind}:${doc.path}`).join(",")}]`);
+  }
+
+  if (ctx.setupHints?.length) {
+    parts.push(`[HINTS ${ctx.setupHints.slice(0, 6).join(" | ")}]`);
   }
 
   return parts.join(" ");

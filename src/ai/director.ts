@@ -16,8 +16,8 @@ import {
 } from "./models.js";
 import { buildDirectorContextPacket } from "./directorContext.js";
 import { intelligentResponse } from "./intelligence.js";
+import { applySteeringToPlan, formatPlanChange, maskKeyValues } from "../agent/runtime.js";
 import {
-  applyPlanTextAdjustment,
   envInterpretationToRecord,
   interpretEnvBatch,
   maskEnvVars,
@@ -166,7 +166,7 @@ async function maybeHandleEnvIntent(input: DirectorInput, text: string): Promise
 
   input.store.getState().addMessage({
     role: "thinking",
-    content: `I parsed environment input and kept sensitive values masked: ${masked.map((item) => `${item.key}=${item.value}`).join(", ")}.`,
+    content: `I parsed environment input and kept sensitive values masked: ${maskKeyValues(values) || masked.map((item) => `${item.key}=${item.value}`).join(", ")}.`,
   });
   if (parsed.ignored.some((line) => line.reason !== "blank" && line.reason !== "comment")) {
     input.store.getState().addNotice({
@@ -190,8 +190,9 @@ function maybeHandlePlanIntent(input: DirectorInput, text: string): DirectorResu
   const state = input.store.getState();
   if (state.steps.length === 0) return null;
 
-  const adjusted = applyPlanTextAdjustment(state.steps, text);
+  const adjusted = applySteeringToPlan(state.steps, text);
   state.setSteps(adjusted.steps);
+  input.store.getState().addMessage({ role: "assistant", content: formatPlanChange(adjusted.diff) });
   for (const note of adjusted.notes) {
     input.store.getState().addMessage({ role: "thinking", content: note });
     input.store.getState().addLog({ type: "info", content: note });

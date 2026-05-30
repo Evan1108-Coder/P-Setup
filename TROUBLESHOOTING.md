@@ -155,8 +155,30 @@ setup port  # Check all common ports
 If a checkpoint is corrupted or stale:
 ```bash
 rm -rf .setupr/checkpoint.json
+rm -rf .setupr/agent-workflow.json
 setup  # Start fresh
 ```
+
+### AI re-planning did not happen
+
+Setupr uses deterministic recovery first. Known failures such as npm peer-dependency conflicts can re-plan without a live AI call. Novel failures need a configured provider:
+
+```bash
+setupr auth doctor
+setupr auth test
+```
+
+If the provider times out, Setupr reports `AI_PROVIDER_TIMEOUT` and continues with the safest heuristic behavior.
+
+### Plugin extension not detected
+
+Run:
+
+```bash
+setupr plugin validate ./your-plugin
+```
+
+The manifest should include `setupr.apiVersion: "1"` and at least one extension array: `commands`, `scanners`, `planners`, `doctorChecks`, `fixers`, or `panels`.
 
 ### Wrong language/framework detected
 

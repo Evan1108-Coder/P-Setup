@@ -1,18 +1,45 @@
 import { execSync } from "child_process";
-import { readdir, readFile } from "fs/promises";
-import { join } from "path";
+import { createHash } from "crypto";
+import { existsSync } from "fs";
+import { mkdir, readdir, readFile, stat, writeFile } from "fs/promises";
+import { dirname, join } from "path";
 import type { ScanResult } from "../scanner/index.js";
 import { type ProjectContext } from "../ai/dsl.js";
 
 export async function collectContext(cwd: string, scan: ScanResult): Promise<ProjectContext> {
-  const [git, envVars, fileTree, terminal] = await Promise.all([
+  const cached = await readCachedContext(cwd, scan);
+  if (cached) return cached;
+
+  const [git, envVars, fileTree, terminal, documents] = await Promise.all([
     collectGitInfo(cwd),
     collectEnvVars(cwd),
     collectFileTree(cwd),
     collectTerminalInfo(),
+    collectDocuments(cwd),
   ]);
 
-  return { cwd, scan, git, envVars, fileTree, terminal };
+  const context: ProjectContext = {
+    cwd,
+    scan,
+    git,
+    envVars,
+    fileTree,
+    terminal,
+    documents,
+    packageScripts: rankPackageScripts(scan.scripts),
+    setupHints: extractSetupHints(documents, scan),
+    docker: {
+      files: fileTree.filter((file) => /^Dockerfile(?:\.|$)/.test(file)),
+      composeFiles: fileTree.filter((file) => /(?:^|\/)docker-compose\.(ya?ml)$|(?:^|\/)compose\.(ya?ml)$/.test(file)),
+    },
+    ci: {
+      files: fileTree.filter((file) => /^\.github\/workflows\/|^\.gitlab-ci\.yml$|^circle\.yml$|^bitbucket-pipelines\.yml$/.test(file)),
+    },
+    collectedAt: Date.now(),
+    cacheHit: false,
+  };
+  await writeCachedContext(cwd, scan, context).catch(() => undefined);
+  return context;
 }
 
 async function collectGitInfo(cwd: string): Promise<ProjectContext["git"]> {
@@ -45,6 +72,7 @@ async function collectGitInfo(cwd: string): Promise<ProjectContext["git"]> {
 async function collectEnvVars(cwd: string): Promise<ProjectContext["envVars"]> {
   const defined: string[] = [];
   const missing: string[] = [];
+  const templateKeys: string[] = [];
 
   try {
     const example = await readFile(join(cwd, ".env.example"), "utf-8");
@@ -53,6 +81,7 @@ async function collectEnvVars(cwd: string): Promise<ProjectContext["envVars"]> {
       .filter((l) => l.trim() && !l.startsWith("#"))
       .map((l) => l.split("=")[0].trim())
       .filter(Boolean);
+    templateKeys.push(...requiredVars);
 
     let currentVars: Set<string> = new Set();
     try {
@@ -75,7 +104,7 @@ async function collectEnvVars(cwd: string): Promise<ProjectContext["envVars"]> {
     }
   } catch {}
 
-  return { defined, missing };
+  return { defined, missing, templateKeys };
 }
 
 async function collectFileTree(cwd: string): Promise<string[]> {
@@ -110,4 +139,145 @@ function collectTerminalInfo(): ProjectContext["terminal"] {
     platform: process.platform,
     nodeVersion: process.version,
   };
+}
+
+async function collectDocuments(cwd: string): Promise<NonNullable<ProjectContext["documents"]>> {
+  const candidates = [
+    { path: "README.md", kind: "readme" as const },
+    { path: "README", kind: "readme" as const },
+    { path: "SETUP.md", kind: "setup" as const },
+    { path: "CONTRIBUTING.md", kind: "contributing" as const },
+    { path: ".env.example", kind: "env" as const },
+    { path: "Dockerfile", kind: "docker" as const },
+    { path: "docker-compose.yml", kind: "docker" as const },
+    { path: "compose.yml", kind: "docker" as const },
+    { path: ".github/workflows/ci.yml", kind: "ci" as const },
+    { path: ".github/workflows/ci.yaml", kind: "ci" as const },
+    { path: ".gitlab-ci.yml", kind: "ci" as const },
+    { path: ".setupr.json", kind: "config" as const },
+  ];
+
+  const docs: NonNullable<ProjectContext["documents"]> = [];
+  for (const candidate of candidates) {
+    const path = join(cwd, candidate.path);
+    if (!existsSync(path)) continue;
+    try {
+      const info = await stat(path);
+      if (!info.isFile() || info.size > 512_000) continue;
+      const content = await readFile(path, "utf-8");
+      docs.push({ path: candidate.path, kind: candidate.kind, excerpt: excerptDocument(content) });
+    } catch {}
+  }
+
+  const docDirs = ["docs", ".github"];
+  for (const dir of docDirs) {
+    try {
+      const entries = await readdir(join(cwd, dir), { withFileTypes: true });
+      for (const entry of entries.slice(0, 20)) {
+        if (!entry.isFile() || !/\.(md|mdx|txt|ya?ml)$/i.test(entry.name)) continue;
+        const rel = `${dir}/${entry.name}`;
+        const content = await readFile(join(cwd, rel), "utf-8").catch(() => "");
+        if (content) docs.push({ path: rel, kind: dir === "docs" ? "docs" : "ci", excerpt: excerptDocument(content) });
+      }
+    } catch {}
+  }
+
+  return docs.slice(0, 20);
+}
+
+function rankPackageScripts(scripts: Record<string, string>): NonNullable<ProjectContext["packageScripts"]> {
+  const weights: Record<string, { score: number; reason: string }> = {
+    dev: { score: 100, reason: "common local development script" },
+    start: { score: 90, reason: "standard app start script" },
+    serve: { score: 85, reason: "common preview/server script" },
+    develop: { score: 80, reason: "framework development script" },
+    watch: { score: 70, reason: "watch mode script" },
+    test: { score: 55, reason: "verification script" },
+    build: { score: 50, reason: "build verification script" },
+  };
+  return Object.entries(scripts)
+    .map(([name, command]) => ({
+      name,
+      command,
+      score: weights[name]?.score ?? (/(dev|start|serve|watch)/i.test(name) ? 65 : 20),
+      reason: weights[name]?.reason ?? "project script",
+    }))
+    .sort((a, b) => b.score - a.score || a.name.localeCompare(b.name));
+}
+
+function extractSetupHints(
+  documents: NonNullable<ProjectContext["documents"]>,
+  scan: ScanResult
+): string[] {
+  const hints = new Set<string>();
+  for (const doc of documents) {
+    const lower = doc.excerpt.toLowerCase();
+    if (/npm install|pnpm install|yarn install|bun install/.test(lower)) hints.add("docs mention dependency installation");
+    if (/copy .*\.env|\.env\.example|environment variable/.test(lower)) hints.add("docs mention environment configuration");
+    if (/docker compose|docker-compose/.test(lower)) hints.add("docs mention Docker Compose");
+    if (/migrate|migration|prisma|alembic|manage\.py migrate/.test(lower)) hints.add("docs mention database migrations");
+    if (/postgres|redis|mysql|mongodb/.test(lower)) hints.add("docs mention backing services");
+  }
+  if (scan.services.length) hints.add(`scanner detected services: ${scan.services.join(", ")}`);
+  return [...hints].slice(0, 12);
+}
+
+function excerptDocument(content: string): string {
+  return content
+    .replace(/\r\n/g, "\n")
+    .split("\n")
+    .filter((line) => !line.trim().startsWith("!["))
+    .join("\n")
+    .replace(/[ \t]+/g, " ")
+    .slice(0, 5000);
+}
+
+async function readCachedContext(cwd: string, scan: ScanResult): Promise<ProjectContext | null> {
+  try {
+    const cacheFile = cachePath(cwd);
+    const raw = await readFile(cacheFile, "utf-8");
+    const parsed = JSON.parse(raw) as { key?: string; context?: ProjectContext };
+    if (parsed.key !== await cacheKey(cwd, scan) || !parsed.context) return null;
+    return { ...parsed.context, cacheHit: true };
+  } catch {
+    return null;
+  }
+}
+
+async function writeCachedContext(cwd: string, scan: ScanResult, context: ProjectContext): Promise<void> {
+  const file = cachePath(cwd);
+  await mkdir(dirname(file), { recursive: true });
+  await writeFile(file, `${JSON.stringify({ key: await cacheKey(cwd, scan), context }, null, 2)}\n`, "utf-8");
+}
+
+function cachePath(cwd: string): string {
+  return join(cwd, ".setupr", "cache", "project-context.json");
+}
+
+async function cacheKey(cwd: string, scan: ScanResult): Promise<string> {
+  const files = [
+    "package.json",
+    "README.md",
+    "SETUP.md",
+    "CONTRIBUTING.md",
+    ".env.example",
+    "Dockerfile",
+    "docker-compose.yml",
+    ".setupr.json",
+  ];
+  const hash = createHash("sha256");
+  hash.update(JSON.stringify({
+    language: scan.language,
+    framework: scan.framework,
+    packageManager: scan.packageManager,
+    scripts: scan.scripts,
+    configFiles: scan.configFiles,
+  }));
+  for (const file of files) {
+    try {
+      const info = await stat(join(cwd, file));
+      hash.update(`${file}:${info.mtimeMs}:${info.size}`);
+    } catch {}
+  }
+  return hash.digest("hex");
 }

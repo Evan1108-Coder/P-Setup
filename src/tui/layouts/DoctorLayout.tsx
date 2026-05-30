@@ -13,6 +13,8 @@ import { intelligentResponse } from "../../ai/intelligence.js";
 import { scanResultToDSL } from "../../ai/dsl.js";
 import { classifyCommandFailure, createSetuprError, type SetuprError } from "../../errors/index.js";
 import type { ScanResult } from "../../scanner/index.js";
+import { collectContext } from "../../context/collector.js";
+import { doctorInsights, type DoctorInsight } from "../../agent/runtime.js";
 
 interface Check {
   label: string;
@@ -42,12 +44,15 @@ export function DoctorLayout({ scan, cwd }: DoctorLayoutProps) {
   );
   const focus = useFocusNavigation({ items: focusItems, onQuit: () => exit() });
   const [checks, setChecks] = useState<Check[]>([]);
+  const [insights, setInsights] = useState<DoctorInsight[]>([]);
   const [done, setDone] = useState(false);
   const [chatMessages, setChatMessages] = useState<string[]>([]);
 
   useEffect(() => {
-    runDiagnostics(scan, cwd, noProject).then((results) => {
+    runDiagnostics(scan, cwd, noProject).then(async (results) => {
       setChecks(results);
+      const context = await collectContext(cwd, scan).catch(() => null);
+      setInsights(context ? doctorInsights(context) : []);
       setDone(true);
     });
   }, []);
@@ -121,6 +126,17 @@ export function DoctorLayout({ scan, cwd }: DoctorLayoutProps) {
                 <Text color={colors.heading} bold>AI CHAT</Text>
                 {chatMessages.slice(-4).map((msg, i) => (
                   <Text key={i} color={msg.startsWith("AI") ? colors.primary : colors.accent} wrap="truncate">{msg}</Text>
+                ))}
+              </>
+            )}
+            {insights.length > 0 && (
+              <>
+                <Text> </Text>
+                <Text color={colors.heading} bold>AI DIAGNOSIS</Text>
+                {insights.slice(0, 5).map((insight) => (
+                  <Text key={insight.issue} color={insight.severity === "error" ? colors.error : insight.severity === "warning" ? colors.warning : colors.info} wrap="truncate">
+                    {insight.issue}: {insight.fix?.command || insight.explanation}
+                  </Text>
                 ))}
               </>
             )}

@@ -18,10 +18,12 @@ src/
 ├── tui/          # React/Ink TUI components and layouts
 ├── scanner/      # Project detection (language, framework, PM, services)
 ├── ai/           # Multi-provider AI client (6 providers), intelligence layers, DSL
+├── agent/        # AI director runtime: safety, plan diffs, checkpoints, provider diagnostics
 ├── executor/     # Step execution, checkpoint saving, undo/redo
 ├── processes/    # Managed process supervisor, registry, and logs
 ├── status/       # Dashboard/status collection
 ├── context/      # Environment context collection
+├── plugins/      # Public plugin API contracts
 ├── state/        # Zustand store, checkpoint, config
 └── utils/        # Shared utilities
 ```
@@ -68,6 +70,7 @@ Plugin packages should include:
 - a `setupr` block in `package.json` with `apiVersion: "1"`
 - a built entrypoint exposed through `main` or `exports`
 - deterministic failure behavior: invalid manifests should surface `PLUGIN_INVALID`, install/load failures should surface `PLUGIN_LOAD_FAILED`
+- extension points should return structured values and route shell work through the executor/safety layer
 
 ## Testing
 

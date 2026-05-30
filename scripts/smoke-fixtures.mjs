@@ -32,6 +32,14 @@ function createFixtures() {
   dir("monorepo/packages/a");
   dir("git-safe");
   dir("tui-empty");
+  dir("next-app/pages");
+  dir("vite-app/src");
+  dir("django-app");
+  dir("fastapi-app");
+  dir("rust-app/src");
+  dir("go-app");
+  dir("docker-heavy");
+  dir("broken-lock");
 
   write("malformed-pkg/package.json", "{\"scripts\":{\"test\":\"node -e \\\\\\\"process.exit(1)\\\\\\\"\"}");
   write("malformed-config/.setupr.json", "{broken");
@@ -74,6 +82,40 @@ function createFixtures() {
   spawnSync("git", ["config", "user.name", "Smoke Test"], { cwd: join(temp, "git-safe"), encoding: "utf8" });
   spawnSync("git", ["add", "."], { cwd: join(temp, "git-safe"), encoding: "utf8" });
   spawnSync("git", ["commit", "-m", "feat: initial"], { cwd: join(temp, "git-safe"), encoding: "utf8" });
+
+  write("next-app/package.json", JSON.stringify({
+    scripts: { dev: "next dev", build: "next build", start: "next start" },
+    dependencies: { next: "^14.0.0", react: "^18.0.0", "react-dom": "^18.0.0" },
+  }));
+  write("next-app/README.md", "## Setup\nnpm install\ncopy .env.example\nnpm run dev\n");
+  write("next-app/.env.example", "DATABASE_URL=\nNEXT_PUBLIC_BASE_URL=http://localhost:3000\n");
+  write("next-app/pages/index.js", "export default function Home(){return 'ok'}\n");
+  write("vite-app/package.json", JSON.stringify({
+    scripts: { dev: "vite --host 0.0.0.0", build: "vite build", test: "vitest" },
+    dependencies: { "@vitejs/plugin-react": "^5.0.0", vite: "^5.0.0", react: "^18.0.0" },
+  }));
+  write("vite-app/src/main.jsx", "console.log('vite')\n");
+  write("django-app/pyproject.toml", "[project]\nname='django-app'\ndependencies=['django']\n");
+  write("django-app/manage.py", "print('django')\n");
+  write("django-app/.env.example", "SECRET_KEY=\nDATABASE_URL=\n");
+  write("fastapi-app/pyproject.toml", "[project]\nname='fastapi-app'\ndependencies=['fastapi','uvicorn']\n");
+  write("fastapi-app/main.py", "from fastapi import FastAPI\napp=FastAPI()\n");
+  write("rust-app/Cargo.toml", "[package]\nname='rust-app'\nversion='0.1.0'\nedition='2021'\n");
+  write("rust-app/src/main.rs", "fn main(){println!(\"hi\")}\n");
+  write("go-app/go.mod", "module example.com/goapp\n\ngo 1.22\n");
+  write("go-app/main.go", "package main\nfunc main(){}\n");
+  write("docker-heavy/package.json", JSON.stringify({
+    scripts: { dev: "node server.js" },
+    dependencies: { express: "^4.18.0" },
+  }));
+  write("docker-heavy/Dockerfile", "FROM node:20\nWORKDIR /app\n");
+  write("docker-heavy/docker-compose.yml", "services:\n  db:\n    image: postgres\n  redis:\n    image: redis\n");
+  write("docker-heavy/README.md", "Run docker compose up, then npm run dev.\n");
+  write("broken-lock/package.json", JSON.stringify({
+    scripts: { dev: "node server.js" },
+    dependencies: { express: "^4.18.0" },
+  }));
+  write("broken-lock/package-lock.json", "{broken");
 }
 
 function plainSmoke() {
@@ -99,6 +141,16 @@ function plainSmoke() {
   expectRun("new command workspace", "monorepo", ["workspace", "list", "--plain"], ["Workspace Packages", "a"]);
   expectRun("new command scaffold nested", "js-new", ["scaffold", "test", "src/lib/math.ts", "--plain"], ["Created test: src/lib/math.test.ts"]);
   expectNoFile("git shell injection blocked", "git-safe", ["git", "branch", "create", `bad; touch ${join(temp, "git-pwned")} #`, "--plain"], join(temp, "git-pwned"));
+  expectRun("agent context next app", "next-app", ["status", "--plain", "--json"], ["Next.js", "NEXT_PUBLIC_BASE_URL"]);
+  expectRun("agent context vite app", "vite-app", ["status", "--plain"], ["Vite", "npm", "AI:"]);
+  expectRun("agent context django app", "django-app", ["doctor", "--plain"], ["Setupr Doctor", "AI Director Diagnosis"]);
+  expectRun("agent context fastapi app", "fastapi-app", ["info", "--plain"], ["Python", "FastAPI"]);
+  expectRun("agent context rust app", "rust-app", ["info", "--plain"], ["Rust"]);
+  expectRun("agent context go app", "go-app", ["info", "--plain"], ["Go"]);
+  expectRun("agent context docker app", "docker-heavy", ["doctor", "--plain"], ["Setupr Doctor", "AI Director Diagnosis"]);
+  expectRun("broken lock handled", "broken-lock", ["status", "--plain"], ["Setupr Status", "Dependencies"]);
+  expectRun("plugin api scaffold", "js-new", ["plugin", "create", "demo", "--plain", "--force"], ["Created Setupr plugin project"]);
+  expectRun("plugin api validate", "js-new", ["plugin", "validate", "setupr-plugin-demo", "--plain"], ["Manifest looks valid"]);
 }
 
 function tuiSmoke() {

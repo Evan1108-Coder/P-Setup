@@ -16,6 +16,8 @@ import { hasProjectSignals } from "./projectSignals.js";
 import { getProviderEnvValue } from "../ai/models.js";
 import { fromUnknownError, errorSummary } from "../errors/index.js";
 import { deleteCheckpoint, formatCheckpointAge, loadCheckpoint } from "../state/checkpoint.js";
+import { loadAgentWorkflowCheckpoint, saveAgentWorkflowCheckpoint } from "../agent/workflowCheckpoint.js";
+import { analyzeEnvTemplate, createPostSetupSummary, formatEnvInsights } from "../agent/runtime.js";
 import type { AgentPrompt, AgentPromptResponse, AppStore } from "../state/store.js";
 import {
   applyPlanTextAdjustment,
@@ -73,6 +75,15 @@ async function runSetupFlow(cwd: string, store: AppStore, options: { force: bool
   try {
     if (options.force) {
       await deleteCheckpoint(cwd);
+    }
+    const agentCheckpoint = options.force ? null : await loadAgentWorkflowCheckpoint(cwd);
+    if (agentCheckpoint && agentCheckpoint.phase !== "complete") {
+      store.getState().addLog({ content: `Found agent workflow checkpoint (${agentCheckpoint.phase}).`, type: "warning" });
+      store.getState().addMessage({
+        role: "assistant",
+        content: `I found an interrupted agent workflow from ${formatCheckpointAge(agentCheckpoint.timestamp)}. I will restore the saved plan and continue from the recorded state.`,
+      });
+      store.getState().setSteps(agentCheckpoint.steps);
     }
     const checkpoint = options.force ? null : await loadCheckpoint(cwd);
     if (checkpoint) {
@@ -154,12 +165,31 @@ async function runSetupFlow(cwd: string, store: AppStore, options: { force: bool
 
     const context = await collectContext(cwd, scan);
     store.getState().setContext(context);
+    const envInsights = analyzeEnvTemplate(context);
+    if (envInsights.length > 0) {
+      store.getState().addMessage({
+        role: "thinking",
+        content: `Environment analysis:\n${formatEnvInsights(envInsights)}`,
+      });
+    }
 
     store.getState().addLog({ content: "Planning setup steps...", type: "info" });
     store.getState().addMessage({ role: "thinking", content: "Planning setup steps..." });
-    const steps = await planSteps(scan);
+    const steps = agentCheckpoint?.steps?.length ? agentCheckpoint.steps : await planSteps(scan, context);
     const planLevel = shouldUseAIPlanner(scan) && hasAIKeyCheck() ? "live" : "pattern";
     store.getState().setSteps(steps);
+    await saveAgentWorkflowCheckpoint(cwd, {
+      cwd,
+      command: "setup",
+      phase: "planning",
+      steps,
+      completedStepIds: [],
+      failedStepIds: [],
+      skippedStepIds: [],
+      userAnswers: [],
+      lastDecision: "Initial setup plan created.",
+      safeOutputs: [],
+    }).catch(() => undefined);
     store.getState().addLog({ content: `Plan ready: ${steps.length} steps to execute.`, type: "success" });
     store.getState().addMessage({
       role: "thinking",
@@ -201,7 +231,7 @@ async function runSetupFlow(cwd: string, store: AppStore, options: { force: bool
     }
 
     await deleteCheckpoint(cwd);
-    await finishSuccessfulSetup(cwd, store);
+    await finishSuccessfulSetup(cwd, store, execution.results);
   } catch (err) {
     const psetupError = fromUnknownError(err, { command: "setup", cwd });
     store.getState().addLog({ content: errorSummary(psetupError), type: "error" });
@@ -299,7 +329,7 @@ async function collectInteractiveInputs(
   return pendingEnvValues;
 }
 
-async function finishSuccessfulSetup(cwd: string, store: AppStore): Promise<void> {
+async function finishSuccessfulSetup(cwd: string, store: AppStore, results: Awaited<ReturnType<typeof executeAllSteps>>["results"] = []): Promise<void> {
   await refreshEnvVars(cwd, store);
   store.getState().setComplete(true);
 
@@ -324,6 +354,16 @@ async function finishSuccessfulSetup(cwd: string, store: AppStore): Promise<void
   } catch {}
 
   store.getState().addLog({ content: "Setup complete!", type: "success" });
+  const context = store.getState().context;
+  if (context) {
+    const summary = createPostSetupSummary({
+      context,
+      steps: store.getState().steps,
+      results,
+      envInsights: analyzeEnvTemplate(context),
+    });
+    store.getState().addMessage({ role: "assistant", content: summary });
+  }
   store.getState().addMessage({
     role: "assistant",
     content: "Setup complete! You can now chat with me about your project.",

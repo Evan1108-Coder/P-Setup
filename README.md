@@ -174,6 +174,21 @@ When multiple provider keys are present, `P_SETUP_AI_MODEL` or `setup auth use <
 
 Setupr still accepts `export KEY=value` syntax in project env files for project variables and backward-compatible provider overrides.
 
+### AI Director Runtime
+
+Setupr's AI layer is now a director runtime, not only a one-shot planner:
+
+- reads bounded project context from README/setup docs, `.env.example`, package scripts, Docker files, CI files, and scanner output
+- caches context under `.setupr/cache` so startup stays fast
+- turns failures into structured diagnosis and safe re-planning decisions
+- shows plan diffs when chat steering changes the active plan
+- explains env vars, suggests safe local defaults where appropriate, and refuses to invent secrets
+- adds AI-style diagnosis and safe fix suggestions to doctor
+- ranks start scripts using project context and warns about blockers before launching managed processes
+- writes agent workflow checkpoints to `.setupr/agent-workflow.json` so interrupted flows can resume with the same plan, prompt, answers, and safe output excerpts
+
+AI output is not treated as unrestricted shell text. The director proposes structured actions, then Setupr's executor and safety policy decide whether the action is allowed, needs confirmation, or must be blocked.
+
 ### Agent-Guided TUI Flow
 
 The `setup` TUI is an agent workspace, not just a log viewer:
@@ -204,6 +219,10 @@ Examples:
 - command failures are classified as install, build, test, network, permission, timeout, or missing-tool errors when possible.
 - `--force` skips ordinary prompts, but it does not ignore failed commands, invalid auth storage, missing secrets, or destructive blockers.
 
+### Safety Policy
+
+All command-like actions from setup, doctor, start, plugins, and AI steering pass through one safety layer. Safe checks and normal dependency installs can run. Medium/high-risk actions require confirmation. Critical actions such as root/home wildcard deletion, `curl | sh`, unsafe elevated commands, and secret-like shell text are blocked or stopped before execution. `--force` never bypasses critical safety blockers.
+
 ### Environment Management
 
 ```bash
@@ -227,6 +246,7 @@ setup env smart
 ### Checkpoint & Resume
 
 - Progress saved to `.setupr/checkpoint.json`
+- Agent workflow state saved to `.setupr/agent-workflow.json`
 - Setup stops on the first failed step and returns a non-zero exit code in plain mode
 - Persists across terminals and reboots
 - Automatically cleaned up on success
@@ -288,6 +308,8 @@ setupr plugin doctor
 ```
 
 Plugins are installed into the project-local `.setupr/plugins` area and registered in global Setupr config. `plugin create` scaffolds a package with a `setupr` manifest block and starter entrypoint; `plugin validate` checks package metadata and entrypoint shape before install/runtime loading.
+
+Plugin extension points use structured objects and can add commands, scanners, planners, doctor checks, fixers, and TUI/dashboard panels. Plugin-proposed work still routes through Setupr's context, executor, and safety systems.
 
 ## Flags
 
@@ -362,7 +384,7 @@ Before publishing or after touching scanner, error, auth, env, command execution
 npm run smoke:fixtures
 ```
 
-This builds the CLI, creates temporary broken/chaotic fixture projects, and checks malformed project files, env failures, corrupt auth storage, missing scripts, failing scripts, no-project setup, monorepo detection, missing logs/locks/remotes, and structured error codes.
+This builds the CLI, creates temporary broken/chaotic fixture projects, and checks malformed project files, env failures, corrupt auth storage, missing scripts, failing scripts, no-project setup, monorepo detection, missing logs/locks/remotes, plugin scaffolds, and real-world-style fixtures for Next.js, Vite, Django, FastAPI, Rust, Go, Docker-heavy projects, and broken lockfiles.
 
 The fixture smoke also exercises the expanded command surface through the built CLI, including CI, Docker, secrets, share, workspace, scaffold, and a git shell-injection regression check.
 
