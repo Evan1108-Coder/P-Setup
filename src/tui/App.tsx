@@ -6,6 +6,7 @@ import { UpdateLayout } from "./layouts/UpdateLayout.js";
 import { CleanLayout } from "./layouts/CleanLayout.js";
 import { AuthLayout } from "./layouts/AuthLayout.js";
 import { DashboardLayout } from "./layouts/DashboardLayout.js";
+import { ChatLayout } from "./layouts/ChatLayout.js";
 import type { DashboardStatus } from "../status/collector.js";
 import type { ScanResult } from "../scanner/index.js";
 import { scanProject } from "../scanner/index.js";
@@ -31,7 +32,7 @@ import {
   mergeEnvValues,
 } from "../ai/setupFlow.js";
 
-export type TUICommand = "dashboard" | "setup" | "start" | "doctor" | "update" | "clean" | "auth" | "status";
+export type TUICommand = "dashboard" | "setup" | "start" | "doctor" | "update" | "clean" | "auth" | "status" | "chat";
 
 interface AppProps {
   command: TUICommand;
@@ -40,9 +41,12 @@ interface AppProps {
   cleanMode?: "deps" | "share" | "all";
   force?: boolean;
   dashboardStatus?: DashboardStatus;
+  chatInitialMessage?: string;
+  chatStartNew?: boolean;
+  chatResume?: boolean;
 }
 
-export function App({ command, cwd, store, cleanMode = "deps", force = false, dashboardStatus }: AppProps) {
+export function App({ command, cwd, store, cleanMode = "deps", force = false, dashboardStatus, chatInitialMessage, chatStartNew = false, chatResume = false }: AppProps) {
   useEffect(() => {
     if (command === "setup") {
       runSetupFlow(cwd, store, { force });
@@ -67,6 +71,8 @@ export function App({ command, cwd, store, cleanMode = "deps", force = false, da
       return scan ? <CleanLayout scan={scan} cwd={cwd} mode={cleanMode} /> : <SetupLayout store={store} />;
     case "auth":
       return <AuthLayout />;
+    case "chat":
+      return <ChatLayout cwd={cwd} store={store} initialMessage={chatInitialMessage} startNew={chatStartNew} resume={chatResume} />;
     default:
       return <SetupLayout store={store} />;
   }

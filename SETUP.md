@@ -95,15 +95,18 @@ setup auth models
 
 Without an API key, Setupr works fully — it just uses pattern matching and heuristics instead of AI for step planning and chat responses.
 
-You can ask the project-aware director from plain mode:
+You can ask the project-aware director from the chat TUI:
 
 ```bash
+setupr chat
 setupr chat "how do I start this app?"
 setupr chat "what failed last time?"
 setupr chat "switch model to openai/gpt-4.1-mini"
 ```
 
-The chat command loads scan results, docs, env schema, git state, recent Setupr history, and workflow checkpoints. It masks secrets before recording or sending context to providers.
+By default, `setupr chat` opens a persistent project chat workspace. A message after `chat` is sent automatically as the first message, then the TUI stays open. Use `setupr chat --plain "question"` or `setupr chat --json "question"` when you need one-shot output for scripts.
+
+The chat command loads scan results, docs, env schema, git state, recent Setupr history, and workflow checkpoints. It saves recoverable chat state under `.setupr/chat/session.json` with secrets redacted before persistence or provider calls.
 
 ## Agent Runtime
 

@@ -108,6 +108,8 @@ const cli = meow(
       verbose: { type: "boolean", default: false },
       quiet: { type: "boolean", default: false },
       watch: { type: "boolean", default: false },
+      new: { type: "boolean", default: false },
+      resume: { type: "boolean", default: false },
       scope: { type: "string" },
       provider: { type: "string" },
       model: { type: "string" },
@@ -144,7 +146,7 @@ export async function run() {
     flags: cli.flags,
   });
   if (!validateCliRequest(command, subCommand, cwd)) return;
-  const isPlain = (cli.flags.noTui || cli.flags.plain || !process.stdout.isTTY) && !cli.flags.tui;
+  const isPlain = (cli.flags.noTui || cli.flags.plain || (command === "chat" && cli.flags.json) || !process.stdout.isTTY) && !cli.flags.tui;
   const isBareAuth = command === "auth" && !subCommand;
 
   await recordCommandStart(engine, cli.input);
@@ -167,10 +169,21 @@ async function runCommandPath(command: string, subCommand: string | undefined, c
 
     await withInteractiveScreen(async () => {
       await showTransition(command);
-      await launchTUI(command as any, cwd, { cleanMode: subCommand as any, force: cli.flags.force });
+      await launchTUI(command as any, cwd, {
+        cleanMode: subCommand as any,
+        force: cli.flags.force,
+        chatInitialMessage: chatInitialMessage(subCommand),
+        chatStartNew: Boolean(cli.flags.new || (command === "chat" && subCommand === "start") || (command === "chat" && subCommand === "new")),
+        chatResume: Boolean(cli.flags.resume || (command === "chat" && subCommand === "resume")),
+      });
     }, { title: `Setupr ${command}` });
   } else if ((tuiCommands.has(command) || isBareAuth) && isPlain && !isAuthSubcommand) {
     if (command === "auth") {
+      const { runNonTUICommand } = await import("../commands/plain/router.js");
+      await runNonTUICommand(command, subCommand, cwd, { ...cli.flags, args: cli.input.slice(2) });
+      return;
+    }
+    if (command === "chat") {
       const { runNonTUICommand } = await import("../commands/plain/router.js");
       await runNonTUICommand(command, subCommand, cwd, { ...cli.flags, args: cli.input.slice(2) });
       return;
@@ -187,6 +200,16 @@ async function runCommandPath(command: string, subCommand: string | undefined, c
     const { runNonTUICommand } = await import("../commands/plain/router.js");
     await runNonTUICommand(command, subCommand, cwd, { ...cli.flags, args: cli.input.slice(2) });
   }
+}
+
+function chatInitialMessage(subCommand: string | undefined): string | undefined {
+  if (cli.input[0] !== "chat") return undefined;
+  if (cli.flags.resume || cli.flags.new) return cli.input.slice(1).join(" ").trim() || undefined;
+  if (subCommand === "resume" || subCommand === "new" || subCommand === "start") {
+    const rest = cli.input.slice(2).join(" ").trim();
+    return rest || undefined;
+  }
+  return cli.input.slice(1).join(" ").trim() || undefined;
 }
 
 function validateCliRequest(command: string, subCommand: string | undefined, cwd: string): boolean {

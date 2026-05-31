@@ -7,7 +7,7 @@ import type { FocusBounds } from "../hooks/useFocusNavigation.js";
 interface BoundedTextInputProps {
   value: string;
   onChange: (value: string) => void;
-  onSubmit: (value: string) => void;
+  onSubmit: (value: string, meta?: { steer?: boolean }) => void;
   focus: boolean;
   placeholder?: string;
   mask?: string;
@@ -88,7 +88,7 @@ export function BoundedTextInput({
     }
 
     if (key.return) {
-      onSubmit(value);
+      onSubmit(value, { steer: Boolean(key.ctrl) });
       return;
     }
 

@@ -31,6 +31,25 @@ const HELP_NODES: Record<string, HelpNode> = {
     ],
     examples: ["setup", "setup setup --force", "setup setup --plain --force"],
   },
+  chat: {
+    name: "chat",
+    summary: "Open the project AI director chat TUI, or ask one question in plain mode.",
+    usage: "setupr chat [message|start|resume] [--new|--resume|--plain|--json|--model <id>]",
+    options: [
+      { name: "--new", summary: "Start a fresh chat session and ignore saved chat history." },
+      { name: "--resume", summary: "Resume the latest saved project chat session." },
+      { name: "--plain, --no-tui", summary: "Run one-shot plain chat output instead of the TUI." },
+      { name: "--json", summary: "Emit one-shot plain chat output as JSON." },
+      { name: "--model <id>", summary: "Use a specific AI model for this chat request/session." },
+    ],
+    examples: [
+      "setupr chat",
+      "setupr chat how do I start this app?",
+      "setupr chat --new",
+      "setupr chat resume",
+      "setupr chat --plain what failed last time?",
+    ],
+  },
   auth: {
     name: "auth",
     summary: "Manage global Setupr AI provider API keys and active model.",

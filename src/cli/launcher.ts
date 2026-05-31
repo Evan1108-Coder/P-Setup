@@ -8,6 +8,9 @@ import { collectDashboardStatus, createDashboardFallbackStatus, type DashboardSt
 interface LaunchOptions {
   cleanMode?: "deps" | "share" | "all";
   force?: boolean;
+  chatInitialMessage?: string;
+  chatStartNew?: boolean;
+  chatResume?: boolean;
 }
 
 export async function launchTUI(
@@ -37,6 +40,9 @@ export async function launchTUI(
       cleanMode: options?.cleanMode || "deps",
       force: options?.force || false,
       dashboardStatus,
+      chatInitialMessage: options?.chatInitialMessage,
+      chatStartNew: options?.chatStartNew,
+      chatResume: options?.chatResume,
     }),
     { exitOnCtrlC: true }
   );

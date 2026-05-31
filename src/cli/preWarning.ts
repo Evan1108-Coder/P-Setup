@@ -17,7 +17,7 @@ export async function showPreWarning(
   options: PreWarningOptions = {}
 ): Promise<boolean> {
   setNeutralTitle(`Setupr ${command}`);
-  if (command === "dashboard" || command === "status") {
+  if (command === "dashboard" || command === "status" || command === "chat") {
     return true;
   }
   const scan = await scanProject(cwd);

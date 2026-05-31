@@ -18,6 +18,7 @@ describe("help routing", () => {
     const log = vi.spyOn(console, "log").mockImplementation(() => undefined);
 
     expect(showHelp(["auth"])).toBe(true);
+    expect(showHelp(["chat"])).toBe(true);
     expect(showHelp(["auth", "set-key"])).toBe(true);
 	    expect(showHelp(["git"])).toBe(true);
 	    expect(showHelp(["docker"])).toBe(true);
@@ -41,6 +42,7 @@ describe("help routing", () => {
     const output = lines.join("\n");
     for (const command of [
       "git",
+      "chat",
       "init",
       "migrate",
       "ci",

@@ -48,6 +48,8 @@ printf '\033[?2004l'
 
 Inside focused input boxes, Setupr supports common terminal editing shortcuts where the terminal sends compatible sequences: `Ctrl+A/E`, `Ctrl+U/K`, `Ctrl+W`, Option/Alt word movement, and Option/Alt delete. Some terminals let users remap Option-key behavior; if a shortcut inserts characters instead of editing text, check the terminal keyboard profile.
 
+In `setupr chat`, Enter sends a normal message. Ctrl+Enter sends a steering instruction where supported; `/steer ...` is the portable fallback. While the AI is thinking or running, the normal chat box is locked. Press Esc to pause the AI state and Ctrl+R to resume the session.
+
 ### AI features not working
 
 **Cause**: Missing API key.

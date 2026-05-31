@@ -5,7 +5,7 @@ import type { ProjectContext } from "../ai/dsl.js";
 
 export interface AppMessage {
   id: string;
-  role: "system" | "user" | "assistant" | "thinking";
+  role: "system" | "user" | "assistant" | "thinking" | "steer";
   content: string;
   timestamp: number;
   level?: "pattern" | "cached" | "live";
@@ -136,6 +136,7 @@ export interface AppState {
   lockSynced: boolean;
 
   // Actions
+  hydrateSession: (state: AppHydrationState) => void;
   setScan: (scan: ScanResult) => void;
   setContext: (ctx: ProjectContext) => void;
   setSteps: (steps: SetupStep[]) => void;
@@ -160,6 +161,28 @@ export interface AppState {
   addNotice: (notice: NoticeInfo) => void;
   setCheckpoint: (saved: boolean) => void;
   setPackageStats: (stats: { total: number; installed: number; deprecated: number }) => void;
+}
+
+export interface AppHydrationState {
+  messages?: AppMessage[];
+  logs?: LogEntry[];
+  steps?: SetupStep[];
+  currentStepIndex?: number;
+  isRunning?: boolean;
+  isComplete?: boolean;
+  pendingPrompt?: AgentPrompt | null;
+  notices?: NoticeInfo[];
+  envVars?: EnvVar[];
+  ports?: PortInfo[];
+  keyDeps?: DepInfo[];
+  services?: ServiceInfo[];
+  checkpointSaved?: boolean;
+  checkpointPath?: string;
+  totalPackages?: number;
+  installedPackages?: number;
+  deprecatedCount?: number;
+  vulnerabilities?: { high: number; moderate: number; low: number };
+  lockSynced?: boolean;
 }
 
 export function createAppStore(cwd: string) {
@@ -198,6 +221,17 @@ export function createAppStore(cwd: string) {
     deprecatedCount: 0,
     vulnerabilities: { high: 0, moderate: 0, low: 0 },
     lockSynced: false,
+
+    hydrateSession: (partial) =>
+      set((state) => ({
+        ...state,
+        ...partial,
+        inputValue: "",
+        promptResponse: null,
+        startTime: Date.now(),
+        messages: partial.messages ? partial.messages.slice(-500) : state.messages,
+        logs: partial.logs ? partial.logs.slice(-500) : state.logs,
+      })),
 
     setScan: (scan) => set({ scan }),
     setContext: (context) => set({ context }),

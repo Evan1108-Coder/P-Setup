@@ -52,6 +52,7 @@ function getRoleColor(role: AppMessage["role"]): string {
   switch (role) {
     case "assistant": return colors.primary;
     case "user": return colors.accent;
+    case "steer": return colors.keyword;
     case "thinking": return colors.keyword;
     case "system": return colors.textDim;
   }
@@ -61,6 +62,7 @@ function getRolePrefix(msg: AppMessage): string {
   switch (msg.role) {
     case "assistant": return "AI →";
     case "user": return "You →";
+    case "steer": return "◆ Steer →";
     case "thinking": return "💭";
     case "system": return "sys →";
   }

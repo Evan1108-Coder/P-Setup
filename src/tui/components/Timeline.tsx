@@ -5,6 +5,7 @@ import { colors, icons } from "../theme.js";
 export type TimelineEventKind =
   | "user"
   | "assistant"
+  | "steer"
   | "system"
   | "thinking"
   | "log"
@@ -184,6 +185,8 @@ function eventStyle(event: TimelineEvent): { color: string; textColor: string; p
   switch (event.kind) {
     case "user":
       return { color: colors.accent, textColor: colors.textBright, prefix: "You" };
+    case "steer":
+      return { color: colors.keyword, textColor: colors.textBright, prefix: "◆ Steer" };
     case "assistant":
       return { color: colors.primary, textColor: colors.text, prefix: `${icons.arrowRight}` };
     case "system":

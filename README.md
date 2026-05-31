@@ -200,16 +200,21 @@ Setupr's AI layer is now a director runtime, not only a one-shot planner:
 
 AI output is not treated as unrestricted shell text. The director proposes structured actions, then Setupr's executor and safety policy decide whether the action is allowed, needs confirmation, or must be blocked.
 
-You can also use the director without opening the setup TUI:
+You can also use the director from its own chat workspace:
 
 ```bash
+setupr chat
 setupr chat "how do I start this app?"
 setupr chat "what failed last time?"
 setupr chat "switch model to moonshot-v1-128k"
 setupr chat "what env vars still need real values?"
+setupr chat --new
+setupr chat resume
 ```
 
-`setupr chat` reads the same bounded project context as setup: scan results, cached docs, env schema, git state, recent Setupr history, and saved checkpoints. It uses pattern/cached answers when possible and only calls a live model for novel questions when a provider key is configured.
+`setupr chat` opens a persistent TUI by default. If you pass a message, Setupr opens the TUI and auto-sends it as the first message. The chat session is saved under `.setupr/chat/session.json` with secrets redacted, so `setupr chat` or `setupr chat resume` can restore the latest project chat. Use `setupr chat --plain "question"` or `setupr chat --json "question"` for one-shot CI/script output.
+
+The chat TUI reads the same bounded project context as setup: scan results, cached docs, env schema, git state, recent Setupr history, and saved checkpoints. It uses pattern/cached answers when possible and only calls a live model for novel questions when a provider key is configured.
 
 ### Agent-Guided TUI Flow
 
@@ -219,6 +224,8 @@ The `setup` TUI is an agent workspace, not just a log viewer:
 - Inside the TUI, the main panel shows a time-ordered timeline: system events, AI decisions, user messages, command output, warnings, and confirmations.
 - When the agent needs input, it pauses with an option card above the persistent chat input. You can pick an option, paste `KEY=value` environment blobs into `Other...`, or type a plan override such as `skip build` or `prefer pnpm`.
 - The AI director can also act on natural language while setup is open: change models, answer the current prompt, fill env values from pasted text, skip or rewrite plan steps, summarize status, and continue with the updated plan. Common typos and aliases like `skp databse`, `db`, `deps`, and `postgress` are normalized before AI fallback.
+- In the chat TUI, normal messages use Enter. Steering instructions use Ctrl+Enter where the terminal supports it, or `/steer ...`; steer messages are stored separately from normal chat so the director can distinguish questions from workflow changes.
+- When the director asks a question, the TUI shows a prompt card with options plus `Other...`, or a focused text/secret input when a typed value is needed. Normal chat input is locked while the AI is thinking/running; Esc pauses and Ctrl+R resumes.
 - The AI director stays centered on the current setup task, while still allowing brief adjacent questions, clarifications, and steering without being overly strict.
 - For live AI decisions, the director receives a sanitized context packet with project scan data, OS/terminal details, config parameters, current plan, TUI state, notices, dependency/service/port state, terminal diary, and chat history. Secret values are masked before model calls.
 - The same packet includes Setupr's current command capabilities, so the director can recommend or explain git, Docker, CI, workspace, secrets, template, health, plugin, lint, format, and scaffold workflows when they are relevant.

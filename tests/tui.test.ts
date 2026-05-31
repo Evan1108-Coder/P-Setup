@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { findDirectionalFocusItem, type FocusItem } from "../src/tui/hooks/useFocusNavigation.js";
 import { parseSgrMouse, stripTerminalControlInput } from "../src/tui/terminalInput.js";
+import { buildChatFocusItems, buildChatLayout } from "../src/tui/layouts/ChatLayout.js";
 
 const wideSetupItems: FocusItem[] = [
   { id: "steps", row: 0, column: 0, bounds: { x: 1, y: 2, width: 20, height: 6 } },
@@ -27,6 +28,30 @@ describe("TUI focus navigation", () => {
     expect(findDirectionalFocusItem(wideSetupItems, wideSetupItems[5], "down")?.id).toBe("side");
     expect(findDirectionalFocusItem(wideSetupItems, wideSetupItems[6], "up", ["diary"])?.id).toBe("project");
     expect(findDirectionalFocusItem(wideSetupItems, wideSetupItems[8], "up", ["side"])?.id).toBe("services");
+  });
+
+  it("keeps chat input bottom-anchored and right panels visually reachable", () => {
+    const layout = buildChatLayout(140, 36);
+    const items = buildChatFocusItems(layout);
+    const input = items.find((item) => item.id === "input");
+    const conversation = items.find((item) => item.id === "conversation");
+    const plan = items.find((item) => item.id === "plan");
+
+    expect(layout.stacked).toBe(false);
+    expect(input?.parentIds).toContain("conversation");
+    expect(input?.bounds?.y).toBeGreaterThan(20);
+    expect(findDirectionalFocusItem(items, conversation!, "right", ["conversation"])?.id).toBe("plan");
+    expect(findDirectionalFocusItem(items, plan!, "left", ["plan"])?.id).toBe("conversation");
+  });
+
+  it("uses a stacked chat layout on narrow terminals without overflowing height", () => {
+    const layout = buildChatLayout(70, 20);
+    const items = buildChatFocusItems(layout);
+    const maxBottom = Math.max(...items.map((item) => (item.bounds?.y || 0) + (item.bounds?.height || 0)));
+
+    expect(layout.stacked).toBe(true);
+    expect(layout.inputMaxLines).toBeGreaterThanOrEqual(1);
+    expect(maxBottom).toBeLessThanOrEqual(layout.height + 2);
   });
 });
 
